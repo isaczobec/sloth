@@ -63,13 +63,13 @@ namespace ControlFlow {
         }
     }
 
-    void ControlFlowHandler::CompleteStep(int statusCode, bool up = false) {
+    void ControlFlowHandler::CompleteStep(int statusCode, bool up) {
         
         compilationSteps[currentStepIndex].result.statusCode = statusCode;
         
         if (up) {
-            currentStepIndex = parentIndexStepStack.back();
-            parentIndexStepStack.pop_back(); 
+            currentStepIndex = parentIndexStepStack.back(); 
+            parentIndexStepStack.pop_back(); // TODO: Add stack underflow checking
         }
     }
 

@@ -36,13 +36,14 @@ void Tokenizer::Tokenize(std::string& fileString, ControlFlow::ControlFlowHandle
         std::string_view subString = s.substr(s_ptr, s.length() - s_ptr);
         std::cmatch tokenMatch;
 
+        bool found = false;
         for (std::pair<TokenType, std::regex> tokenRegexPair : tokenRegexes) {
             
             // try to search for each token pattern in the remaining input
             bool foundMatch = std::regex_search(subString.begin(), subString.end(), tokenMatch, tokenRegexPair.second);
 
-            if (foundMatch && tokenMatch.position() == 0) {
-
+            if (foundMatch && tokenMatch.position() == 0) 
+            {
                 // begin token data parsing step
                 flowHandler.NewStep(true); // down is true
                 
@@ -55,18 +56,21 @@ void Tokenizer::Tokenize(std::string& fileString, ControlFlow::ControlFlowHandle
                 tokenDataPtr += tokenDataSizeBytes;
 
                 s_ptr += tokenMatch.length();
+                found = true;
                 break;
-                
-            } else {
-                // if no token could be parsed, throw error
-                flowHandler.Error(ControlFlow::CompilationErrorSeverity::ERROR, ControlFlow::ERRCODE_UNKNOWN_TOKEN, "Invalid token");
-                flowHandler.CompleteStep(ControlFlow::STATUSCODE_ERROR_EXIT);
-            }
-
+            } 
+        }
+        if (found == false) {
+            // if no token could be parsed, throw error
+            flowHandler.Error(ControlFlow::CompilationErrorSeverity::ERROR, ControlFlow::ERRCODE_UNKNOWN_TOKEN, "Invalid token");
+            flowHandler.CompleteStep(ControlFlow::STATUSCODE_ERROR_EXIT);
+            return;
         }
         
 
     }
+
+    flowHandler.CompleteStep(ControlFlow::STATUSCODE_SUCCESS_CONTINUE);
 }
 
 std::vector<Token>* Tokenizer::GetTokens() {

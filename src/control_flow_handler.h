@@ -41,7 +41,7 @@ namespace ControlFlow {
     };
 
     const inline CompilationStepResult COMPILATION_STEP_NOT_FINNISHED = {
-        statuscode = STATUSCODE_NOT_FINNISHED
+        .statusCode = STATUSCODE_NOT_FINNISHED
     };
 
     struct CompilationStep {
