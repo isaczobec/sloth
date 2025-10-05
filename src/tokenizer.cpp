@@ -4,12 +4,18 @@
 
 using namespace Tokenization;
 
+Token::Token(TokenType type, size_t dataSizeBytes, void* tokenData) {
+    this->type = type; 
+    this->dataSizeBytes = dataSizeBytes; 
+    this->tokenData = tokenData; 
+}
+
 Tokenizer::Tokenizer() {
     tokenData = new uint8_t[TOKEN_DATA_DEFAULT_CAPACITY_BYTES];
     tokenDataSizeBytes = 0;
 }
 
-void Tokenizer::Tokenize(std::string& fileString) {
+void Tokenizer::Tokenize(std::string& fileString, ControlFlow::ControlFlowHandler& flowHandler) {
     
     // create a string view and a pointer to the current character
     size_t s_ptr = 0;
@@ -25,31 +31,46 @@ void Tokenizer::Tokenize(std::string& fileString) {
             ++s_ptr;
             continue;
         }
-
+        
+        // search the relevant substring
+        std::string_view subString = s.substr(s_ptr, s.length() - s_ptr);
         std::cmatch tokenMatch;
+
         for (std::pair<TokenType, std::regex> tokenRegexPair : tokenRegexes) {
             
             // try to search for each token pattern in the remaining input
-            std::string_view subString = s.substr(s_ptr, s.length() - s_ptr);
             bool foundMatch = std::regex_search(subString.begin(), subString.end(), tokenMatch, tokenRegexPair.second);
 
-            if (foundMatch) {
+            if (foundMatch && tokenMatch.position() == 0) {
+
+                // begin token data parsing step
+                flowHandler.NewStep(true); // down is true
                 
                 // find and call the function to parse the token data for the token type
                 size_t tokenDataSizeBytes;
-                tokenParserMap.at(tokenRegexPair.first)(tokenMatch.str(), (void*)(tokenData+tokenDataPtr), &tokenDataSizeBytes);
+                tokenDataParserMap.at(tokenRegexPair.first)(tokenMatch.str(), (void*)(tokenData+tokenDataPtr), &tokenDataSizeBytes, flowHandler);
 
                 // construct and emplace the token, advance the data pointer
                 tokens.emplace_back(tokenRegexPair.first, tokenDataSizeBytes, (void*)(tokenData+tokenDataPtr));
                 tokenDataPtr += tokenDataSizeBytes;
 
                 s_ptr += tokenMatch.length();
+                break;
                 
+            } else {
+                // if no token could be parsed, throw error
+                flowHandler.Error(ControlFlow::CompilationErrorSeverity::ERROR, ControlFlow::ERRCODE_UNKNOWN_TOKEN, "Invalid token");
+                flowHandler.CompleteStep(ControlFlow::STATUSCODE_ERROR_EXIT);
             }
 
         }
         
+
     }
+}
+
+std::vector<Token>* Tokenizer::GetTokens() {
+    return &tokens;
 }
 
 Tokenizer::~Tokenizer() {

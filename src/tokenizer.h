@@ -1,9 +1,11 @@
 #pragma once
+#include "control_flow_handler.h"
 #include <string>
 #include <vector>
 #include <cstdint>
 #include <regex>
 #include <map>
+#include <unordered_map>
 #include <string_view>
 
 #define TOKEN_DATA_DEFAULT_CAPACITY_BYTES 16384
@@ -16,18 +18,20 @@ namespace Tokenization {
         KEYWORD,
         VARIABLE_IDENTIFIER,
     };
-
-    /* The regexes used to match each token type.*/
-    extern const std::map<TokenType, std::regex> tokenRegexes;
     
     struct Token {
         TokenType type;
         size_t dataSizeBytes;
         void* tokenData;
+        
+        Token(TokenType type, size_t dataSizeBytes, void* tokenData);
     };
     
-    typedef void (*TokenDataParser)(std::string_view matchedString, void* dataWriteDestination, size_t* dataSizeBytes);
-    extern const std::map<TokenType, TokenDataParser> tokenParserMap;
+    typedef void (*TokenDataParser)(std::string_view matchedString, void* dataWriteDestination, size_t* dataSizeBytes, ControlFlow::ControlFlowHandler& flowHandler);
+    extern const std::unordered_map<TokenType, TokenDataParser> tokenDataParserMap;
+    
+    /* The regexes used to match each token type.*/
+    extern const std::map<TokenType, std::regex> tokenRegexes;
 
     class Tokenizer {
         private:
@@ -41,7 +45,8 @@ namespace Tokenization {
         Tokenizer();
         ~Tokenizer();
 
-        void Tokenize(std::string& fileString);
+        void Tokenize(std::string& fileString, ControlFlow::ControlFlowHandler& flowHandler);
+        std::vector<Token>* GetTokens();
     };
     
 }

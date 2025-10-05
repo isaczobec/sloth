@@ -3,6 +3,7 @@
 #include <regex>
 #include <iterator>
 #include <cstdio>
+#include <vector>
 #include "tokenizer.h"
 
 namespace sloth {
@@ -11,7 +12,7 @@ namespace sloth {
 
 int main() {
 
-    std::FILE* file = std::fopen("./test","r");
+    std::FILE* file = std::fopen("test","r");
 
     std::string s;
     int c;
@@ -19,18 +20,14 @@ int main() {
         s.append(1, (char)c);
     }
     
-    std::regex r("s.");
+    Tokenization::Tokenizer t;
 
-    std::regex_iterator iter = std::sregex_iterator(s.begin(), s.end(), r);
-    std::regex_iterator end = std::sregex_iterator();
+    t.Tokenize(s);
 
-    for(std::regex_iterator i_match = iter; i_match != end; ++i_match){
-        std::smatch match = *i_match;
-        std::string match_string = match.str();
-        std::cout << match_string << std::endl;
-
-    } 
-
+    for (Tokenization::Token token : *t.GetTokens()) {
+        std::cout << (int)token.type << std::endl;
+    }
+    
     std::fclose(file);
 
 }
