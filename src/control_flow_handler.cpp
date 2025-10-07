@@ -33,12 +33,12 @@ namespace ControlFlow {
 
     void ControlFlowHandler::NewStep(bool down) {
 
-        CompilationStep prevStep = compilationSteps[currentStepIndex];
+        size_t prevStepIndex = currentStepIndex;
 
         
         if (down) 
         {
-            if (prevStep.subStepIndex != STEP_NULL) {
+            if (compilationSteps[prevStepIndex].subStepIndex != STEP_NULL) {
                 throw std::logic_error("Tried to insert a substep into a compilation step that already has a substep. returning.");
                 return;
             }
@@ -46,20 +46,20 @@ namespace ControlFlow {
             // push the previous step index to the parent index stack 
             parentIndexStepStack.push_back(currentStepIndex);
             compilationSteps.emplace_back(); // construct the new step
-            prevStep.subStepIndex = currentStepIndex;
             currentStepIndex = compilationSteps.size() - 1;
+            compilationSteps[prevStepIndex].subStepIndex = currentStepIndex;
         } 
         else 
         {
             // throw an error if the previous step has not yet been completed
-            if (prevStep.result == COMPILATION_STEP_NOT_FINNISHED) {
+            if (compilationSteps[prevStepIndex].result == COMPILATION_STEP_NOT_FINNISHED) {
                 throw std::logic_error("Tried to insert a next step while the current one has not yet been finished. Call ControlFlowHandler::CompleteStep() before beginning a new step.");
                 return;
             }
 
             compilationSteps.emplace_back(); // construct the new step
-            prevStep.nextStepIndex = currentStepIndex;
             currentStepIndex = compilationSteps.size() - 1;
+            compilationSteps[prevStepIndex].nextStepIndex = currentStepIndex;
         }
     }
 

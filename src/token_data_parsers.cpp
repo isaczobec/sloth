@@ -11,7 +11,7 @@ void BracketDataParser(std::string_view matchedString, void* dataWriteDestinatio
     *(char*)dataWriteDestination = bracketChar;
     *dataSizeBytes = sizeof(char);
 
-    flowHandler.CompleteStep(ControlFlow::STATUSCODE_SUCCESS_CONTINUE, true);
+    flowHandler.CompleteStep(ControlFlow::STATUSCODE_SUCCESS_CONTINUE);
 }
 
 void KeywordDataParser(std::string_view matchedString, void* dataWriteDestination, size_t* dataSizeBytes, ControlFlow::ControlFlowHandler& flowHandler) 
@@ -20,7 +20,7 @@ void KeywordDataParser(std::string_view matchedString, void* dataWriteDestinatio
     *(size_t*)dataWriteDestination = keywordIdMap.at(matchedString);
     *dataSizeBytes = sizeof(size_t);
 
-    flowHandler.CompleteStep(ControlFlow::STATUSCODE_SUCCESS_CONTINUE, true);
+    flowHandler.CompleteStep(ControlFlow::STATUSCODE_SUCCESS_CONTINUE);
 }
 
 void VariableIdentifierDataParser(std::string_view matchedString, void* dataWriteDestination, size_t* dataSizeBytes, ControlFlow::ControlFlowHandler& flowHandler) 
@@ -29,7 +29,7 @@ void VariableIdentifierDataParser(std::string_view matchedString, void* dataWrit
     std::memcpy(dataWriteDestination, matchedString.data(), matchedString.size());
     *dataSizeBytes = matchedString.size() * sizeof(char);
 
-    flowHandler.CompleteStep(ControlFlow::STATUSCODE_SUCCESS_CONTINUE, true);
+    flowHandler.CompleteStep(ControlFlow::STATUSCODE_SUCCESS_CONTINUE);
 }
 
 namespace Tokenization {

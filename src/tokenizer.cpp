@@ -23,6 +23,9 @@ void Tokenizer::Tokenize(std::string& fileString, ControlFlow::ControlFlowHandle
 
     size_t tokenDataPtr = 0;
 
+    // a step for beginning the token matching
+    flowHandler.NewStep(true);
+    flowHandler.CompleteStep();
 
     while (s_ptr < s.length()) {
 
@@ -45,7 +48,7 @@ void Tokenizer::Tokenize(std::string& fileString, ControlFlow::ControlFlowHandle
             if (foundMatch && tokenMatch.position() == 0) 
             {
                 // begin token data parsing step
-                flowHandler.NewStep(true); // down is true
+                flowHandler.NewStep(); // down is true
                 
                 // find and call the function to parse the token data for the token type
                 size_t tokenDataSizeBytes;
@@ -60,15 +63,19 @@ void Tokenizer::Tokenize(std::string& fileString, ControlFlow::ControlFlowHandle
                 break;
             } 
         }
-        if (found == false) {
+            if (found == false) {
             // if no token could be parsed, throw error
             flowHandler.Error(ControlFlow::CompilationErrorSeverity::ERROR, ControlFlow::ERRCODE_UNKNOWN_TOKEN, "Invalid token");
             flowHandler.CompleteStep(ControlFlow::STATUSCODE_ERROR_EXIT);
             return;
         }
-        
-
     }
+
+    // a step for finalizing the token parsing.
+    // currently just used to go up in the step tree.
+    flowHandler.NewStep();
+    flowHandler.CompleteStep(ControlFlow::STATUSCODE_SUCCESS_CONTINUE, true);
+
 
     flowHandler.CompleteStep(ControlFlow::STATUSCODE_SUCCESS_CONTINUE);
 }
