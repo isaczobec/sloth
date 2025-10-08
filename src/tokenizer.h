@@ -14,6 +14,7 @@
 namespace Tokenization {
 
     enum class TokenType {
+        NONE,
         BRACKET,
         KEYWORD,
         VARIABLE_IDENTIFIER,
