@@ -53,7 +53,13 @@ namespace ParseTree {
 
         ParseTreeNode* node = new ParseTreeNode(NULL);
 
-        for (DefinitionComponent dc : (*rule).definition) {
+        /* Indexes into the token stream, of where we should return to if parsing an alternative for a subdefinition fails*/
+        std::vector<size_t> subDefinitionReturnStack;
+        
+        
+        bool failed = false; 
+        for (int dcidx = 0; dcidx < (*rule).definition.size(); ++dcidx) {
+            DefinitionComponent& dc = (*rule).definition[dcidx];
 
             // divide token/directive/subrule cases
             if (dc.rule != RULECOMPONENT_NO_RULE) {
@@ -64,9 +70,9 @@ namespace ParseTree {
                     childNode->parent = node;
                     node->children.push_back(childNode);
                 } else {
-                    // the child node did not exist, delete created nodes and return `NULL` (the parsing failed)
-                    delete node;
-                    return NULL;
+                    // the child node did adhere to the syntax, delete created nodes and return `NULL` (the parsing failed)
+                    failed = true;
+                    break;
                 }
                 
             } else if (dc.directive != RULECOMPONENT_NO_DIRECTIVE) {
@@ -76,10 +82,15 @@ namespace ParseTree {
                     node->tokens.push_back(tokens[tokenPtr]);
                     tokenPtr += 1;
                 } else {
-                    delete node;
-                    return nullptr;
+                    failed = true; 
+                    break;
                 }  
             }
+        }
+
+        if (failed) {
+            delete node;
+            return nullptr;
         }
 
         return node;
