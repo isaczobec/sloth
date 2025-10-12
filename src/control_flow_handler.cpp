@@ -73,9 +73,9 @@ namespace ControlFlow {
         }
     }
 
-    void ControlFlowHandler::Compile() {
+    void ControlFlowHandler::Compile(const char* filename) {
 
-        std::FILE* file = std::fopen("test","r");
+        std::FILE* file = std::fopen(filename,"r");
 
         std::string s;
         int c;

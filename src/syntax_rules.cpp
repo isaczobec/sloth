@@ -35,15 +35,16 @@ namespace ParseTree {
     Rule* ParseTreeBuilder::CreateRule(size_t ruleIndex, size_t definitionAmount) {
         if (ruleIndex < 0 || ruleIndex >= RULE_AMOUNT) {
             throw std::logic_error("Rule index was out of bounds.");
-            return;
+            return NULL;
         }
         rules[ruleIndex] = Rule(definitionAmount);
+        return &rules[ruleIndex];
     }
 
     Rule* ParseTreeBuilder::GetRule(size_t ruleIndex) {
         if (ruleIndex < 0 || ruleIndex >= RULE_AMOUNT) {
             throw std::logic_error("Rule index was out of bounds.");
-            return;
+            return NULL;
         }
         return &rules[ruleIndex];
     }

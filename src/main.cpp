@@ -11,8 +11,10 @@ namespace sloth {
     int x;
 }
 
-int main() {
+int main(int argc, char** argv) {
 
     ControlFlow::ControlFlowHandler cf;
-    cf.Compile();
+    cf.Compile(argv[1]);
+
+    return 0;
 }

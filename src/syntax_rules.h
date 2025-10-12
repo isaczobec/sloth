@@ -6,6 +6,8 @@ using namespace Tokenization;
 
 namespace ParseTree {
 
+    struct Rule;
+
     inline constexpr TokenType RULECOMPONENT_NO_TOKEN = TokenType::NONE;
     inline constexpr Rule* RULECOMPONENT_NO_RULE = NULL;
 

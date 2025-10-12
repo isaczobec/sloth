@@ -69,6 +69,6 @@ namespace ControlFlow {
         void NewStep(bool down = false);
         void CompleteStep(int statusCode = STATUSCODE_SUCCESS_CONTINUE, bool up = false);  // TODO: replace up down next with enums
 
-        void Compile();
+        void Compile(const char* filename);
     };
 }
