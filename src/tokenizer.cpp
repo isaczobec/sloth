@@ -81,7 +81,6 @@ void Tokenizer::Tokenize(std::string& fileString, ControlFlow::ControlFlowHandle
     flowHandler.NewStep();
     flowHandler.CompleteStep(ControlFlow::STATUSCODE_SUCCESS_CONTINUE, true);
 
-
     flowHandler.CompleteStep(ControlFlow::STATUSCODE_SUCCESS_CONTINUE);
 }
 

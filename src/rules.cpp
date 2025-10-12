@@ -8,8 +8,10 @@ namespace ParseTree {
     }
 
     void CreateRules() {
+        using namespace Rules;
     
-        Rule* testRule = CreateRule(0);
-        *testRule << D_SBST << D_SBED;
+        TERM << TokenType::KEYWORD << TokenType::VARIABLE_IDENTIFIER;
+
+        EXPRESSION << &TERM << TokenType::ASSIGNMENT_OPERATOR << &TERM;
     }
 }

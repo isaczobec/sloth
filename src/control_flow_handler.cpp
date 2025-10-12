@@ -36,7 +36,6 @@ namespace ControlFlow {
     void ControlFlowHandler::NewStep(bool down) {
 
         size_t prevStepIndex = currentStepIndex;
-
         
         if (down) 
         {
@@ -76,6 +75,7 @@ namespace ControlFlow {
     }
 
     void ControlFlowHandler::Compile(const char* filename) {
+        using namespace ParseTree;
 
         std::FILE* file = std::fopen(filename,"r");
 
@@ -94,7 +94,11 @@ namespace ControlFlow {
             std::cout << (int)token.type << std::endl;
         }
         
-        ParseTree::ParseTreeBuilder builder;
+        ParseTreeBuilder builder;
+        int tokenPtr = 0;
+        ParseTreeNode* node = builder.ParseNode(&Rules::EXPRESSION, t.GetTokens(), tokenPtr, *this);
+
+        std::cout << "sadsa" << std::endl;
 
         std::fclose(file);
 

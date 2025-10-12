@@ -50,8 +50,8 @@ namespace ParseTree {
         Rule& AddRuleComponent(TokenType token);
         Rule& AddRuleComponent(DefinitionDirective directive);
 
-        inline Rule& operator<<(Rule* rule) {return AddRuleComponent(rule);}
-        inline Rule& operator<<(TokenType token) {return AddRuleComponent(token);}
+        inline Rule& operator<<(Rule* rule)                    {return AddRuleComponent(rule);}
+        inline Rule& operator<<(TokenType token)               {return AddRuleComponent(token);}
         inline Rule& operator<<(DefinitionDirective directive) {return AddRuleComponent(directive);}
     };  
 
@@ -75,22 +75,15 @@ namespace ParseTree {
         extern Rule TERM;
         extern Rule EXPRESSION;
     }
+
     /* Populate all rules created in the ParseTree::Rules namespace. */
     void CreateRules();
 
-
-
     class ParseTreeBuilder {
-        private:
-        Rule rules[RULE_AMOUNT];
-
 
         public:
         ParseTreeBuilder();
         ~ParseTreeBuilder();
-
-        Rule* CreateRule(size_t ruleIndex);
-        Rule* GetRule(size_t ruleIndex);
 
         /* 
         Attempt to parse the stream of tokens according to the given rule.

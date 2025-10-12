@@ -43,30 +43,11 @@ namespace ParseTree {
         }
     }
 
-
-    Rule* ParseTreeBuilder::CreateRule(size_t ruleIndex) {
-        if (ruleIndex < 0 || ruleIndex >= RULE_AMOUNT) {
-            throw std::logic_error("Rule index was out of bounds.");
-            return NULL;
-        }
-        rules[ruleIndex] = Rule();
-        return &rules[ruleIndex];
-    }
-
-    Rule* ParseTreeBuilder::GetRule(size_t ruleIndex) {
-        if (ruleIndex < 0 || ruleIndex >= RULE_AMOUNT) {
-            throw std::logic_error("Rule index was out of bounds.");
-            return NULL;
-        }
-        return &rules[ruleIndex];
-    }
-
     ParseTreeBuilder::ParseTreeBuilder() {
         CreateRules();
     }
 
-
-
+    ParseTreeBuilder::~ParseTreeBuilder() {}
 
     ParseTreeNode* ParseTreeBuilder::ParseNode(Rule* rule, std::vector<Token>& tokens, int& tokenPtr, ControlFlow::ControlFlowHandler& flowHandler) {
 
@@ -100,6 +81,8 @@ namespace ParseTree {
                 }  
             }
         }
+
+        return node;
     
     }
 }
