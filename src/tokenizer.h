@@ -8,8 +8,8 @@
 #include <unordered_map>
 #include <string_view>
 
-#define TOKEN_DATA_DEFAULT_CAPACITY_BYTES 16384
-#define TOKEN_DATA_REALLOCATION_LIMIT     8192
+#define TOKEN_DATA_DEFAULT_CAPACITY_BYTES 16384 
+#define TOKEN_DATA_REALLOCATION_LIMIT     8192  // TODO: Make it actually reallocate if this limit is reached
 
 namespace Tokenization {
 
@@ -18,12 +18,13 @@ namespace Tokenization {
         BRACKET,
         KEYWORD,
         VARIABLE_IDENTIFIER,
+        ASSIGNMENT_OPERATOR
     };
     
     struct Token {
         TokenType type;
         size_t dataSizeBytes;
-        void* tokenData;
+        void* tokenData = NULL;
         
         Token(TokenType type, size_t dataSizeBytes, void* tokenData);
     };
@@ -47,7 +48,7 @@ namespace Tokenization {
         ~Tokenizer();
 
         void Tokenize(std::string& fileString, ControlFlow::ControlFlowHandler& flowHandler);
-        std::vector<Token>* GetTokens();
+        std::vector<Token>& GetTokens();
     };
     
 }

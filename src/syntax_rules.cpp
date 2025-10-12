@@ -9,35 +9,47 @@ namespace ParseTree {
     DefinitionComponent::DefinitionComponent(TokenType token) {
         this->token = token;
     }
-
-    void Rule::CreateDefinitionsUpTo(size_t definitionIndex) {
-        while(possibleDefinitions.size() - 1 > definitionIndex) {
-            possibleDefinitions.emplace_back();
-            possibleDefinitions.back().reserve(INITIAL_DEFINITION_COMPONENT_CAPACITY);
-        }
+    DefinitionComponent::DefinitionComponent(DefinitionDirective directive) {
+        this->directive = directive;
     }
     
-    Rule::Rule() {}
-    Rule::Rule(size_t definitionAmount) {
-        CreateDefinitionsUpTo(definitionAmount-1);
+    Rule::Rule() {
+        definition.reserve(INITIAL_DEFINITION_COMPONENT_CAPACITY);
     }
         
-    void Rule::AddRuleComponent(size_t definitionIndex, Rule* rule) {
-        CreateDefinitionsUpTo(definitionIndex);
-        possibleDefinitions[definitionIndex].emplace_back(rule);
+    Rule& Rule::AddRuleComponent(Rule* rule) {
+        definition.emplace_back(rule);
+        return *this;
     }   
 
-    void Rule::AddRuleComponent(size_t definitionIndex, TokenType token) {
-        CreateDefinitionsUpTo(definitionIndex);
-        possibleDefinitions[definitionIndex].emplace_back(token);
+    Rule& Rule::AddRuleComponent(TokenType token) {
+        definition.emplace_back(token);
+        return *this;
     }   
 
-    Rule* ParseTreeBuilder::CreateRule(size_t ruleIndex, size_t definitionAmount) {
+    Rule& Rule::AddRuleComponent(DefinitionDirective directive) {
+        definition.emplace_back(directive);
+        return *this;
+    }   
+
+    ParseTreeNode::ParseTreeNode(ParseTreeNode* parent) {
+        this->parent = parent;
+    }
+
+    ParseTreeNode::~ParseTreeNode() {
+        // recursively delete children nodes
+        for (ParseTreeNode* child : children) {
+            delete child;
+        }
+    }
+
+
+    Rule* ParseTreeBuilder::CreateRule(size_t ruleIndex) {
         if (ruleIndex < 0 || ruleIndex >= RULE_AMOUNT) {
             throw std::logic_error("Rule index was out of bounds.");
             return NULL;
         }
-        rules[ruleIndex] = Rule(definitionAmount);
+        rules[ruleIndex] = Rule();
         return &rules[ruleIndex];
     }
 
@@ -53,12 +65,41 @@ namespace ParseTree {
         CreateRules();
     }
 
-    void ParseTreeBuilder::CreateRules() {
 
-        Rule* testRule = CreateRule(0, 2);
-        testRule->AddRuleComponent(0, TokenType::BRACKET);
-        testRule->AddRuleComponent(0, TokenType::BRACKET);
+
+
+    ParseTreeNode* ParseTreeBuilder::ParseNode(Rule* rule, std::vector<Token>& tokens, int& tokenPtr, ControlFlow::ControlFlowHandler& flowHandler) {
+
+        ParseTreeNode* node = new ParseTreeNode(NULL);
+
+        for (DefinitionComponent dc : (*rule).definition) {
+
+            // divide token/directive/subrule cases
+            if (dc.rule != RULECOMPONENT_NO_RULE) {
+
+                // try to parse the child node, add it to the tree if it exists
+                ParseTreeNode* childNode = ParseNode(dc.rule, tokens, tokenPtr, flowHandler);   
+                if (childNode != NULL) {
+                    childNode->parent = node;
+                    node->children.push_back(childNode);
+                } else {
+                    // the child node did not exist, delete created nodes and return `NULL` (the parsing failed)
+                    delete node;
+                    return NULL;
+                }
+                
+            } else if (dc.directive != RULECOMPONENT_NO_DIRECTIVE) {
+
+            } else if (dc.token != RULECOMPONENT_NO_TOKEN) {
+                if (tokens[tokenPtr].type == dc.token) {
+                    node->tokens.push_back(tokens[tokenPtr]);
+                    tokenPtr += 1;
+                } else {
+                    delete node;
+                    return nullptr;
+                }  
+            }
+        }
+    
     }
-
-
 }

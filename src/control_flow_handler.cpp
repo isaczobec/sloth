@@ -1,5 +1,7 @@
 #include "control_flow_handler.h"
 #include "tokenizer.h"
+#include "syntax_rules.h"
+
 #include <iostream>
 #include <string>
 #include <regex>
@@ -88,10 +90,12 @@ namespace ControlFlow {
         NewStep();
         t.Tokenize(s, *this);
 
-        for (Tokenization::Token token : *t.GetTokens()) {
+        for (Tokenization::Token token : t.GetTokens()) {
             std::cout << (int)token.type << std::endl;
         }
         
+        ParseTree::ParseTreeBuilder builder;
+
         std::fclose(file);
 
     }

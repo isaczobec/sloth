@@ -8,49 +8,94 @@ namespace ParseTree {
 
     struct Rule;
 
+    enum class DefinitionDirective {
+        NONE,
+        SUBDEFINITION_START,
+        SUBDEFINITION_END,
+        OR
+    };
+
+    // expressions for increased readability
+    inline constexpr DefinitionDirective D_SBST = DefinitionDirective::SUBDEFINITION_START;
+    inline constexpr DefinitionDirective D_SBED = DefinitionDirective::SUBDEFINITION_END;
+    inline constexpr DefinitionDirective D_OR   = DefinitionDirective::OR;
+
     inline constexpr TokenType RULECOMPONENT_NO_TOKEN = TokenType::NONE;
     inline constexpr Rule* RULECOMPONENT_NO_RULE = NULL;
+    inline constexpr DefinitionDirective RULECOMPONENT_NO_DIRECTIVE = DefinitionDirective::NONE;
 
-    inline constexpr int RULE_AMOUNT = 2;
+    /* The total amount of rules that exist*/
+    inline constexpr int RULE_AMOUNT = 32;
     
     /* The amount of `DefinitionComponent`s a definition by default gets allocated space for. */
-    inline constexpr int INITIAL_DEFINITION_COMPONENT_CAPACITY = 4;
+    inline constexpr int INITIAL_DEFINITION_COMPONENT_CAPACITY = 32;
 
     struct DefinitionComponent {
         Rule* rule = RULECOMPONENT_NO_RULE;
         TokenType token = RULECOMPONENT_NO_TOKEN;
+        DefinitionDirective directive = RULECOMPONENT_NO_DIRECTIVE;
 
         DefinitionComponent(Rule* rule);
         DefinitionComponent(TokenType token);
+        DefinitionComponent(DefinitionDirective directive);
     };
 
     struct Rule {
-        private:
-        std::vector<std::vector<DefinitionComponent>> possibleDefinitions;
+        std::vector<DefinitionComponent> definition;
         
-        void CreateDefinitionsUpTo(size_t definitionIndex);
-
-        public:
-        Rule(size_t definitionAmount);
         Rule();
 
-        void AddRuleComponent(size_t definitionIndex, Rule* rule);
-        void AddRuleComponent(size_t definitionIndex, TokenType token);
+        // functions to add a definition component, and << operator overload to increase readability
+        Rule& AddRuleComponent(Rule* rule);
+        Rule& AddRuleComponent(TokenType token);
+        Rule& AddRuleComponent(DefinitionDirective directive);
+
+        inline Rule& operator<<(Rule* rule) {return AddRuleComponent(rule);}
+        inline Rule& operator<<(TokenType token) {return AddRuleComponent(token);}
+        inline Rule& operator<<(DefinitionDirective directive) {return AddRuleComponent(directive);}
     };  
+
+    struct ParseTreeNode {
+
+        /* The children rules of this node, if any.*/
+        std::vector<ParseTreeNode*> children;
+        /* The parent of this node.*/
+        ParseTreeNode* parent;
+        
+        /* the tokens that this rule has parsed, if any.*/
+        std::vector<Token> tokens; // TODO: inneffective to copy the tokens from the existing token vector given from the tokenizer? Safe to just use pointers to the original tokens instead?
+        /* The rule that this node has parsed.*/
+        Rule* rule;
+
+        ParseTreeNode(ParseTreeNode* parent);
+        ~ParseTreeNode();
+    };
+
+    namespace Rules {
+        extern Rule TERM;
+        extern Rule EXPRESSION;
+    }
+    /* Populate all rules created in the ParseTree::Rules namespace. */
+    void CreateRules();
+
+
 
     class ParseTreeBuilder {
         private:
         Rule rules[RULE_AMOUNT];
 
-        void CreateRules();
 
         public:
         ParseTreeBuilder();
         ~ParseTreeBuilder();
 
-        Rule* CreateRule(size_t ruleIndex, size_t definitionAmount);
+        Rule* CreateRule(size_t ruleIndex);
         Rule* GetRule(size_t ruleIndex);
 
-
+        /* 
+        Attempt to parse the stream of tokens according to the given rule.
+        Returns `NULL` if the stream of tokens did not adhere to the syntax.
+        */
+        ParseTreeNode* ParseNode(Rule* rule, std::vector<Token>& tokens, int& tokenPtr, ControlFlow::ControlFlowHandler& flowHandler);
     };
 }
