@@ -12,13 +12,18 @@ namespace ParseTree {
         NONE,
         SUBDEFINITION_START,
         SUBDEFINITION_END,
-        OR
+        OR,
+        OPTIONAL_START,
+        OPTIONAL_END
     };
 
     // expressions for increased readability
     inline constexpr DefinitionDirective D_SBST = DefinitionDirective::SUBDEFINITION_START;
     inline constexpr DefinitionDirective D_SBED = DefinitionDirective::SUBDEFINITION_END;
     inline constexpr DefinitionDirective D_OR   = DefinitionDirective::OR;
+    /* `DefinitionComponent`s between this directive and `D_OPED can optionally be included in the current rule.*/
+    inline constexpr DefinitionDirective D_OPST   = DefinitionDirective::OPTIONAL_START;
+    inline constexpr DefinitionDirective D_OPED   = DefinitionDirective::OPTIONAL_END;
 
     inline constexpr TokenType RULECOMPONENT_NO_TOKEN = TokenType::NONE;
     inline constexpr Rule* RULECOMPONENT_NO_RULE = NULL;
