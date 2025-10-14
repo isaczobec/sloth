@@ -57,6 +57,33 @@ namespace ParseTree {
         std::vector<size_t> subDefinitionReturnStack;
         std::vector<bool> subDefIsOptionalStack; // if the subdefinitions in `subDefinitionReturnStack` are optional
         
+        /*
+        helper function to go forward upon failed parsing to the next
+        possible definition. After this is called dcidx will be pointing
+        at a D_OPED or D_OR directive if one was found, and in that case
+        return true, otherwise return false.
+        */  
+        auto gotoNextParsePoint = [&subDefIsOptionalStack, &subDefinitionReturnStack](int& dcidx, Rule* rule) {
+            // look forward and try to find an `OR` directive or optional subsdefinition ender.
+            while (dcidx < (*rule).definition.size()) {
+                dcidx++;
+
+                // remove any subdefinitions we pass
+                if ((*rule).definition[dcidx].directive == D_SBED) {
+                    subDefinitionReturnStack.pop_back();
+                    subDefIsOptionalStack.pop_back();
+
+                } else if ((*rule).definition[dcidx].directive == D_OPED) {
+                    subDefinitionReturnStack.pop_back();
+                    subDefIsOptionalStack.pop_back();
+                    return true;
+                    
+                } else if ((*rule).definition[dcidx].directive == D_OR) {
+                    return true;
+                }
+            }
+            return false;
+        };
         
         bool failed = false; 
         for (int dcidx = 0; dcidx < (*rule).definition.size(); ++dcidx) {
@@ -72,23 +99,13 @@ namespace ParseTree {
                     node->children.push_back(childNode);
                 } else {
                     // the child node did adhere to the syntax, delete created nodes and return `NULL` (the parsing failed)
-                    failed = true;
 
                     // look forward and try to find an `OR` directive or optional subsdefinition ender.
-                    // 
-                    // TODO: YOU LEFT OF HERE
-                    // MAKE SURE TO REMOVE PASSED ENDS OF SUBSDEFINITIONS FROM THE STACKS
-                    bool foundOr = false;
-                    while (dcidx < ) {
-                        dcidx++;
-
-                        // if we do not find a substring ender, throw an error
-                        if (dcidx >= (*rule).definition.size()) {
-                            break;
-                        }
+                    // if we found an OR directive or end of optional subdefinition and do not need to exit
+                    if (!gotoNextParsePoint(dcidx, rule)) {
+                        failed = true;
+                        break;
                     }
-
-                    break;
                 }
                 
             } else if (dc.directive != RULECOMPONENT_NO_DIRECTIVE) {
@@ -97,15 +114,26 @@ namespace ParseTree {
                 if (dc.directive == D_SBST) {
                     subDefinitionReturnStack.push_back(tokenPtr);
                     subDefIsOptionalStack.push_back(false);
-                    tokenPtr += 1;
                     continue;
                 }
-
+                
+                
                 // if we made it to the end of a subdefinition, pop the top return index
                 else if (dc.directive == D_SBED) {
                     subDefinitionReturnStack.pop_back();
                     subDefIsOptionalStack.pop_back(); // TODO: check if it is not optional, otherwise rules are wrongly defined
-                    tokenPtr += 1;
+                    continue;
+                }
+                
+                // same but for optional substrings
+                if (dc.directive == D_OPST) {
+                    subDefinitionReturnStack.push_back(tokenPtr);
+                    subDefIsOptionalStack.push_back(true);
+                    continue;
+                }
+                else if (dc.directive == D_OPED) {
+                    subDefinitionReturnStack.pop_back();
+                    subDefIsOptionalStack.pop_back(); // TODO: check if it is not optional, otherwise rules are wrongly defined
                     continue;
                 }
 
@@ -124,25 +152,38 @@ namespace ParseTree {
                         // until the end of the subdefinition
                         subDefinitionReturnStack.pop_back();
                         subDefIsOptionalStack.pop_back();
-                        while ((*rule).definition[dcidx].directive != D_SBED) {
+                        while ((*rule).definition[dcidx].directive != D_SBED && (*rule).definition[dcidx].directive != D_OPED) {
                             dcidx++;
 
                             // if we do not find a substring ender, throw an error
                             if (dcidx >= (*rule).definition.size()) {
-                                throw std::logic_error("Could not find the end of the current subdefinition. Make sure the Rule has a DefinitionDirective::SUBDEFINITION_END.");
-                                return;
+                                throw std::logic_error("Could not find the end of the current subdefinition. Make sure the Rule has a DefinitionDirective::SUBDEFINITION_END or DefinitionDirective::OPTIONAL_END.");
+                                return nullptr;
                             }
                         }
                     }
                 }
 
             } else if (dc.token != RULECOMPONENT_NO_TOKEN) {
-                if (tokens[tokenPtr].type == dc.token) {
+
+                // if there are too few tokens left in the stream
+                if (tokens.size() <= tokenPtr) {
+                    
+                    // if we are inside an optional inclusion, it is fine that there are no more tokens left
+                    if (!(subDefinitionReturnStack.size() >= 1 && subDefIsOptionalStack[0])) {
+                        failed = true;
+                        return nullptr;
+                    }
+                } 
+                else if (tokens[tokenPtr].type == dc.token) {
                     node->tokens.push_back(tokens[tokenPtr]);
                     tokenPtr += 1;
                 } else {
-                    failed = true; 
-                    break;
+
+                    if (!gotoNextParsePoint(dcidx, rule)) {
+                        failed = true;
+                        break;
+                    }
                 }  
             }
         }
