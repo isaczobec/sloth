@@ -1,5 +1,5 @@
 #pragma once
-#include "tokenizer.h"
+#include "../tokenization/tokenizer.h"
 #include <vector>
 #include <cstdint>
 using namespace Tokenization;
@@ -77,8 +77,20 @@ namespace ParseTree {
     };
 
     namespace Rules {
-        extern Rule TERM;
+        
+        extern Rule PROGRAM;
+        
+        extern Rule SCOPE;
+        extern Rule STATEMENT;
+        
+        extern Rule CONTROL_SEQUENCE;
+        extern Rule FUNCTION;
+
+        extern Rule DECLARATION;
+        extern Rule ASSIGNMENT;
+        
         extern Rule EXPRESSION;
+        extern Rule TERM;
     }
 
     /* Populate all rules created in the ParseTree::Rules namespace. */

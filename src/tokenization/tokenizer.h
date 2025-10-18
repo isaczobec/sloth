@@ -1,5 +1,5 @@
 #pragma once
-#include "control_flow_handler.h"
+#include "../flow-handler/control_flow_handler.h"
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -17,8 +17,11 @@ namespace Tokenization {
         NONE,
         BRACKET,
         KEYWORD,
+        BRACKET_CURLY_LEFT,
+        BRACKET_CURLY_RIGHT,
         VARIABLE_IDENTIFIER,
-        ASSIGNMENT_OPERATOR
+        ASSIGNMENT_OPERATOR,
+
     };
     
     struct Token {

@@ -1,6 +1,6 @@
 #include "control_flow_handler.h"
-#include "tokenizer.h"
-#include "syntax_rules.h"
+#include "../tokenization/tokenizer.h"
+#include "../syntax-parsing/syntax_rules.h"
 
 #include <iostream>
 #include <string>

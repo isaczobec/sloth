@@ -4,8 +4,8 @@
 #include <iterator>
 #include <cstdio>
 #include <vector>
-#include "tokenizer.h"
-#include "control_flow_handler.h"
+#include "tokenization/tokenizer.h"
+#include "flow-handler/control_flow_handler.h"
 
 namespace sloth {
     int x;
