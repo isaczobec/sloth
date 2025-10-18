@@ -72,23 +72,26 @@ namespace ParseTree {
         /* The rule that this node has parsed.*/
         Rule* rule;
 
-        ParseTreeNode(ParseTreeNode* parent);
+        ParseTreeNode(ParseTreeNode* parent, Rule* rule);
         ~ParseTreeNode();
     };
 
     namespace Rules {
         
-        extern Rule PROGRAM;
-        
-        extern Rule SCOPE;
         extern Rule STATEMENT;
-        
-        extern Rule CONTROL_SEQUENCE;
-        extern Rule FUNCTION;
+        extern Rule SCOPE;
 
-        extern Rule DECLARATION;
+        extern Rule CONTROL_SEQUENCE;
+        
+        extern Rule TYPE_IDENTIFIER;
+        extern Rule FUNCTION_DECLARATION;
+        extern Rule VARIABLE_DECLARATION;
         extern Rule ASSIGNMENT;
         
+        extern Rule ENUMERATION_EXPRESSIONS; // an enumeration of elements/expressions, e.g. "potato, 2, matrix, matmul(potato, matrix)". used e.g. for calling functions.
+        extern Rule ENUMERATION_TYPED_IDENTIFIERS; // an enumeration of typed identifiers, e.g. "Matrix a, Scalar b"
+
+        extern Rule FUNCITON_CALL;
         extern Rule EXPRESSION;
         extern Rule TERM;
     }

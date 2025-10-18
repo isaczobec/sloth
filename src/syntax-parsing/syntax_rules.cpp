@@ -32,8 +32,9 @@ namespace ParseTree {
         return *this;
     }   
 
-    ParseTreeNode::ParseTreeNode(ParseTreeNode* parent) {
+    ParseTreeNode::ParseTreeNode(ParseTreeNode* parent, Rule* rule) {
         this->parent = parent;
+        this->rule = rule;
     }
 
     ParseTreeNode::~ParseTreeNode() {
@@ -51,39 +52,72 @@ namespace ParseTree {
 
     ParseTreeNode* ParseTreeBuilder::ParseNode(Rule* rule, std::vector<Token>& tokens, int& tokenPtr, ControlFlow::ControlFlowHandler& flowHandler) {
 
-        ParseTreeNode* node = new ParseTreeNode(NULL);
+        ParseTreeNode* node = new ParseTreeNode(NULL, rule);
 
         /* Indexes into the token stream, of where we should return to if parsing an alternative for a subdefinition fails*/
         std::vector<size_t> subDefinitionReturnStack;
         std::vector<bool> subDefIsOptionalStack; // if the subdefinitions in `subDefinitionReturnStack` are optional
+        std::vector<size_t> subDefTokenStartIndexStack; // A stack keeping track of where subdefinition tokens start, so they can be popped if parsing a subdefinition fails
+        std::vector<size_t> subDefChildStartIndexStack; // A stack keeping track of where subdefinition children start, so they can be popped if parsing a subdefinition fails
         
+
+
+        const auto popChildren = [&subDefTokenStartIndexStack, &subDefChildStartIndexStack, node]() {
+            while (node->children.size() > subDefChildStartIndexStack.back()) {
+                delete node->children.back();
+                node->children.pop_back();
+            }
+            while (node->tokens.size() > subDefTokenStartIndexStack.back()) {
+                node->tokens.pop_back();
+            }
+            subDefChildStartIndexStack.pop_back();
+            subDefTokenStartIndexStack.pop_back();
+        };
+
         /*
         helper function to go forward upon failed parsing to the next
         possible definition. After this is called dcidx will be pointing
         at a D_OPED or D_OR directive if one was found, and in that case
         return true, otherwise return false.
         */  
-        auto gotoNextParsePoint = [&subDefIsOptionalStack, &subDefinitionReturnStack](int& dcidx, Rule* rule) {
+        const auto gotoNextParsePoint = [&subDefIsOptionalStack, &subDefinitionReturnStack, &popChildren](int& dcidx, Rule* rule) {
             // look forward and try to find an `OR` directive or optional subsdefinition ender.
+
+            // we must find an OPED or OR on the same or lower level to be able to exit to it
+            int scopeLevelInitial = subDefinitionReturnStack.size() - 1;
+            int scopeLevel = scopeLevelInitial;
+
             while (dcidx < (*rule).definition.size()) {
                 dcidx++;
 
+                if ((*rule).definition[dcidx].directive == D_SBST || (*rule).definition[dcidx].directive == D_OPST) {
+                    scopeLevel++;
+                }
+
                 // remove any subdefinitions we pass
                 if ((*rule).definition[dcidx].directive == D_SBED) {
+                    scopeLevel--;
                     subDefinitionReturnStack.pop_back();
                     subDefIsOptionalStack.pop_back();
-
+                    popChildren();
+                    
                 } else if ((*rule).definition[dcidx].directive == D_OPED) {
                     subDefinitionReturnStack.pop_back();
                     subDefIsOptionalStack.pop_back();
-                    return true;
+                    popChildren();
+                    if (scopeLevel <= scopeLevelInitial) {
+                        return true;
+                    } else {
+                        scopeLevel--;
+                    }
                     
-                } else if ((*rule).definition[dcidx].directive == D_OR) {
+                } else if ((*rule).definition[dcidx].directive == D_OR && scopeLevel <= scopeLevelInitial) {
                     return true;
                 }
             }
             return false;
         };
+
         
         bool failed = false; 
         for (int dcidx = 0; dcidx < (*rule).definition.size(); ++dcidx) {
@@ -114,6 +148,8 @@ namespace ParseTree {
                 if (dc.directive == D_SBST) {
                     subDefinitionReturnStack.push_back(tokenPtr);
                     subDefIsOptionalStack.push_back(false);
+                    subDefChildStartIndexStack.push_back(node->children.size());
+                    subDefTokenStartIndexStack.push_back(node->tokens.size());
                     continue;
                 }
                 
@@ -122,6 +158,8 @@ namespace ParseTree {
                 else if (dc.directive == D_SBED) {
                     subDefinitionReturnStack.pop_back();
                     subDefIsOptionalStack.pop_back(); // TODO: check if it is not optional, otherwise rules are wrongly defined
+                    subDefTokenStartIndexStack.pop_back();
+                    subDefChildStartIndexStack.pop_back();
                     continue;
                 }
                 
@@ -129,29 +167,35 @@ namespace ParseTree {
                 if (dc.directive == D_OPST) {
                     subDefinitionReturnStack.push_back(tokenPtr);
                     subDefIsOptionalStack.push_back(true);
+                    subDefChildStartIndexStack.push_back(node->children.size() - 1);
+                    subDefTokenStartIndexStack.push_back(node->tokens.size() - 1);
                     continue;
                 }
                 else if (dc.directive == D_OPED) {
                     subDefinitionReturnStack.pop_back();
                     subDefIsOptionalStack.pop_back(); // TODO: check if it is not optional, otherwise rules are wrongly defined
+                    subDefTokenStartIndexStack.pop_back();
+                    subDefChildStartIndexStack.pop_back();
                     continue;
                 }
-
+                
                 /*
                 if we have reached an `OR` separator without failing, we can continue
                 until the next subdefinition or finnish if we are not in a subdefinition
                 */ 
-                else if (dc.directive == D_OR) {
-
-                    if (subDefinitionReturnStack.size() == 0) {
-                        // if we are not in a subdefinition, the parsing is finnished
-                        break;
-
+               else if (dc.directive == D_OR) {
+                   
+                   if (subDefinitionReturnStack.size() == 0) {
+                       // if we are not in a subdefinition, the parsing is finnished
+                       break;
+                       
                     } else {
                         // we are in a subdefinition, pop the return index and go forward
                         // until the end of the subdefinition
                         subDefinitionReturnStack.pop_back();
                         subDefIsOptionalStack.pop_back();
+                        subDefTokenStartIndexStack.pop_back();
+                        subDefChildStartIndexStack.pop_back();
                         while ((*rule).definition[dcidx].directive != D_SBED && (*rule).definition[dcidx].directive != D_OPED) {
                             dcidx++;
 

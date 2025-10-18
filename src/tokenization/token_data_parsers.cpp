@@ -23,7 +23,7 @@ void KeywordDataParser(std::string_view matchedString, void* dataWriteDestinatio
     flowHandler.CompleteStep(ControlFlow::STATUSCODE_SUCCESS_CONTINUE);
 }
 
-void VariableIdentifierDataParser(std::string_view matchedString, void* dataWriteDestination, size_t* dataSizeBytes, ControlFlow::ControlFlowHandler& flowHandler) 
+void MemCpyMatchedStringParser(std::string_view matchedString, void* dataWriteDestination, size_t* dataSizeBytes, ControlFlow::ControlFlowHandler& flowHandler) 
 {
     // get the appropriate keyword id
     std::memcpy(dataWriteDestination, matchedString.data(), matchedString.size());
@@ -35,8 +35,10 @@ void VariableIdentifierDataParser(std::string_view matchedString, void* dataWrit
 namespace Tokenization {
     
     const std::unordered_map<TokenType, TokenDataParser> tokenDataParserMap = {
-        {TokenType::BRACKET,             &BracketDataParser},
-        {TokenType::KEYWORD,             &KeywordDataParser},
-        {TokenType::VARIABLE_IDENTIFIER, &VariableIdentifierDataParser},
+        {TokenType::IDENTIFIER,          &MemCpyMatchedStringParser},
+        {TokenType::BINARY_OPERATOR,     &MemCpyMatchedStringParser},
+        {TokenType::RELATIONAL_OPERATOR, &MemCpyMatchedStringParser},
+        {TokenType::LITERAL_FLOAT,       &MemCpyMatchedStringParser}, // TODO: Change theese two to maybe parse the string to floats etc?
+        {TokenType::LITERAL_INTEGER,     &MemCpyMatchedStringParser},
     };
 };

@@ -15,13 +15,28 @@ namespace Tokenization {
 
     enum class TokenType {
         NONE,
-        BRACKET,
-        KEYWORD,
+
         BRACKET_CURLY_LEFT,
         BRACKET_CURLY_RIGHT,
-        VARIABLE_IDENTIFIER,
+        BRACKET_NORMAL_LEFT,
+        BRACKET_NORMAL_RIGHT,
+        
+        IDENTIFIER,
+        
         ASSIGNMENT_OPERATOR,
+        RELATIONAL_OPERATOR,
+        BINARY_OPERATOR,
 
+        STATEMENT_TERMINATOR,
+        
+        LITERAL_INTEGER,
+        LITERAL_FLOAT,
+
+        KEYWORD_IF,
+        KEYWORD_ELSE,
+        KEYWORD_WHILE,
+
+        ELEMENT_SEPARATOR
     };
     
     struct Token {
