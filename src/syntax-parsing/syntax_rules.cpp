@@ -57,21 +57,30 @@ namespace ParseTree {
         /* Indexes into the token stream, of where we should return to if parsing an alternative for a subdefinition fails*/
         std::vector<size_t> subDefinitionReturnStack;
         std::vector<bool> subDefIsOptionalStack; // if the subdefinitions in `subDefinitionReturnStack` are optional
-        std::vector<size_t> subDefTokenStartIndexStack; // A stack keeping track of where subdefinition tokens start, so they can be popped if parsing a subdefinition fails
-        std::vector<size_t> subDefChildStartIndexStack; // A stack keeping track of where subdefinition children start, so they can be popped if parsing a subdefinition fails
+        std::vector<size_t> subDefTokenStartStack; // A stack keeping track of where subdefinition tokens start, so they can be popped if parsing a subdefinition fails
+        std::vector<size_t> subDefChildStartStack; // A stack keeping track of where subdefinition children start, so they can be popped if parsing a subdefinition fails
         
 
 
-        const auto popChildren = [&subDefTokenStartIndexStack, &subDefChildStartIndexStack, node]() {
-            while (node->children.size() > subDefChildStartIndexStack.back()) {
-                delete node->children.back();
-                node->children.pop_back();
+        const auto popChildren = [&subDefTokenStartStack, &subDefChildStartStack, node](bool popStacks = true, bool deletechildren = true) {
+            if (subDefTokenStartStack.empty() || subDefChildStartStack.empty()) return;
+
+            if (deletechildren) {
+                // only delete while we have more children than the recorded start index
+                while (node->children.size() > subDefChildStartStack.back()) {
+                    delete node->children.back();
+                    node->children.pop_back();
+                }
+                // only pop tokens that were added after the recorded start index
+                while (node->tokens.size() > subDefTokenStartStack.back()) {
+                    node->tokens.pop_back();
+                }
             }
-            while (node->tokens.size() > subDefTokenStartIndexStack.back()) {
-                node->tokens.pop_back();
+
+            if (popStacks) {
+                subDefChildStartStack.pop_back();
+                subDefTokenStartStack.pop_back();
             }
-            subDefChildStartIndexStack.pop_back();
-            subDefTokenStartIndexStack.pop_back();
         };
 
         /*
@@ -112,6 +121,9 @@ namespace ParseTree {
                     }
                     
                 } else if ((*rule).definition[dcidx].directive == D_OR && scopeLevel <= scopeLevelInitial) {
+                    if (scopeLevel == scopeLevelInitial) {
+                        popChildren(false, true); // only delete children, do not pop stacks
+                    }
                     return true;
                 }
             }
@@ -148,8 +160,8 @@ namespace ParseTree {
                 if (dc.directive == D_SBST) {
                     subDefinitionReturnStack.push_back(tokenPtr);
                     subDefIsOptionalStack.push_back(false);
-                    subDefChildStartIndexStack.push_back(node->children.size());
-                    subDefTokenStartIndexStack.push_back(node->tokens.size());
+                    subDefChildStartStack.push_back(node->children.size());
+                    subDefTokenStartStack.push_back(node->tokens.size());
                     continue;
                 }
                 
@@ -158,24 +170,23 @@ namespace ParseTree {
                 else if (dc.directive == D_SBED) {
                     subDefinitionReturnStack.pop_back();
                     subDefIsOptionalStack.pop_back(); // TODO: check if it is not optional, otherwise rules are wrongly defined
-                    subDefTokenStartIndexStack.pop_back();
-                    subDefChildStartIndexStack.pop_back();
+                    popChildren(true, false);
                     continue;
                 }
                 
                 // same but for optional substrings
                 if (dc.directive == D_OPST) {
+                    // record current positions as the start of the optional group
                     subDefinitionReturnStack.push_back(tokenPtr);
                     subDefIsOptionalStack.push_back(true);
-                    subDefChildStartIndexStack.push_back(node->children.size() - 1);
-                    subDefTokenStartIndexStack.push_back(node->tokens.size() - 1);
+                    subDefChildStartStack.push_back(node->children.size());
+                    subDefTokenStartStack.push_back(node->tokens.size());
                     continue;
                 }
                 else if (dc.directive == D_OPED) {
                     subDefinitionReturnStack.pop_back();
                     subDefIsOptionalStack.pop_back(); // TODO: check if it is not optional, otherwise rules are wrongly defined
-                    subDefTokenStartIndexStack.pop_back();
-                    subDefChildStartIndexStack.pop_back();
+                    popChildren(true, false);
                     continue;
                 }
                 
@@ -194,8 +205,8 @@ namespace ParseTree {
                         // until the end of the subdefinition
                         subDefinitionReturnStack.pop_back();
                         subDefIsOptionalStack.pop_back();
-                        subDefTokenStartIndexStack.pop_back();
-                        subDefChildStartIndexStack.pop_back();
+                        popChildren(true, false);
+
                         while ((*rule).definition[dcidx].directive != D_SBED && (*rule).definition[dcidx].directive != D_OPED) {
                             dcidx++;
 
