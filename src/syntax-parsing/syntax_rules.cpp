@@ -213,7 +213,7 @@ namespace ParseTree {
                             // if we do not find a substring ender, throw an error
                             if (dcidx >= (*rule).definition.size()) {
                                 throw std::logic_error("Could not find the end of the current subdefinition. Make sure the Rule has a DefinitionDirective::SUBDEFINITION_END or DefinitionDirective::OPTIONAL_END.");
-                                return nullptr;
+                                return NULL;
                             }
                         }
                     }
@@ -223,11 +223,11 @@ namespace ParseTree {
 
                 // if there are too few tokens left in the stream
                 if (tokens.size() <= tokenPtr) {
-                    
+
                     // if we are inside an optional inclusion, it is fine that there are no more tokens left
                     if (!(subDefinitionReturnStack.size() >= 1 && subDefIsOptionalStack[0])) {
                         failed = true;
-                        return nullptr;
+                        return NULL;
                     }
                 } 
                 else if (tokens[tokenPtr].type == dc.token) {
@@ -243,9 +243,14 @@ namespace ParseTree {
             }
         }
 
+        // if we have used all definition components and parsed nothing, we have failed
+        if (node->tokens.empty() && node->children.empty()) {
+            failed = true;
+        }
+
         if (failed) {
             delete node;
-            return nullptr;
+            return NULL;
         }
 
         return node;
