@@ -51,7 +51,7 @@ namespace Tokenization {
     extern const std::unordered_map<TokenType, TokenDataParser> tokenDataParserMap;
     
     /* The regexes used to match each token type.*/
-    extern const std::map<TokenType, std::regex> tokenRegexes;
+    extern const std::vector<std::pair<TokenType, std::regex>> tokenRegexes;
 
     class Tokenizer {
         private:

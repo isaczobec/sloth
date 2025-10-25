@@ -8,6 +8,7 @@ set(SRC
     "src/flow-handler/control_flow_handler.cpp" 
     "src/syntax-parsing/syntax_rules.cpp"
     "src/syntax-parsing/rules.cpp"
+    "src/file-reading/file_reader.cpp"
 )
 
 project(sloth)

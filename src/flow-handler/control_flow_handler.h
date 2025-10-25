@@ -13,6 +13,7 @@ namespace ControlFlow {
 
     // Error codes for compilation (and runtime?) errors 
     constexpr inline int ERRCODE_UNKNOWN_TOKEN = 0;
+    constexpr inline int ERRCODE_UNREADABLE_FILE = 1;
     
     // status codes for compilation (and runtime?) results. Tells the flow handler what to do next 
     constexpr inline int STATUSCODE_NOT_FINNISHED    = -1;

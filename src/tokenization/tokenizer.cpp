@@ -51,7 +51,7 @@ void Tokenizer::Tokenize(std::string& fileString, ControlFlow::ControlFlowHandle
                 flowHandler.NewStep(); // down is true
                 
                 // find and call the function to parse the token data for the token type if it exists
-                size_t tokenDataSizeBytes;
+                size_t tokenDataSizeBytes = 0;
                 auto parserFunction = tokenDataParserMap.find(tokenRegexPair.first);
                 if (parserFunction != tokenDataParserMap.end()) {
                     parserFunction->second(tokenMatch.str(), (void*)(tokenData+tokenDataPtr), &tokenDataSizeBytes, flowHandler);
@@ -61,7 +61,7 @@ void Tokenizer::Tokenize(std::string& fileString, ControlFlow::ControlFlowHandle
 
                 // construct and emplace the token, advance the data pointer
                 tokens.emplace_back(tokenRegexPair.first, tokenDataSizeBytes, (void*)(tokenData+tokenDataPtr));
-                tokenDataPtr += tokenDataSizeBytes;
+                tokenDataPtr += tokenDataSizeBytes; // since `tokenDataSizeBytes` is initialized to 0, the data pointer does not advance if no parser was found
 
                 s_ptr += tokenMatch.length();
                 found = true;

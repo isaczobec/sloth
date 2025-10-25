@@ -59,7 +59,6 @@ namespace ParseTree {
         std::vector<bool> subDefIsOptionalStack; // if the subdefinitions in `subDefinitionReturnStack` are optional
         std::vector<size_t> subDefTokenStartStack; // A stack keeping track of where subdefinition tokens start, so they can be popped if parsing a subdefinition fails
         std::vector<size_t> subDefChildStartStack; // A stack keeping track of where subdefinition children start, so they can be popped if parsing a subdefinition fails
-        
 
 
         const auto popChildren = [&subDefTokenStartStack, &subDefChildStartStack, node](bool popStacks = true, bool deletechildren = true) {
@@ -89,7 +88,7 @@ namespace ParseTree {
         at a D_OPED or D_OR directive if one was found, and in that case
         return true, otherwise return false.
         */  
-        const auto gotoNextParsePoint = [&subDefIsOptionalStack, &subDefinitionReturnStack, &popChildren](int& dcidx, Rule* rule) {
+        const auto gotoNextParsePoint = [&subDefIsOptionalStack, &subDefinitionReturnStack, &popChildren, &tokenPtr](int& dcidx, Rule* rule) {
             // look forward and try to find an `OR` directive or optional subsdefinition ender.
 
             // we must find an OPED or OR on the same or lower level to be able to exit to it
@@ -104,13 +103,15 @@ namespace ParseTree {
                 }
 
                 // remove any subdefinitions we pass
-                if ((*rule).definition[dcidx].directive == D_SBED) {
+                if ((*rule).definition[dcidx].directive == D_SBED && scopeLevel <= scopeLevelInitial) {
                     scopeLevel--;
+                    tokenPtr = subDefinitionReturnStack.back();
                     subDefinitionReturnStack.pop_back();
                     subDefIsOptionalStack.pop_back();
                     popChildren();
                     
-                } else if ((*rule).definition[dcidx].directive == D_OPED) {
+                } else if ((*rule).definition[dcidx].directive == D_OPED && scopeLevel <= scopeLevelInitial) {
+                    tokenPtr = subDefinitionReturnStack.back();
                     subDefinitionReturnStack.pop_back();
                     subDefIsOptionalStack.pop_back();
                     popChildren();
@@ -122,6 +123,7 @@ namespace ParseTree {
                     
                 } else if ((*rule).definition[dcidx].directive == D_OR && scopeLevel <= scopeLevelInitial) {
                     if (scopeLevel == scopeLevelInitial) {
+                        tokenPtr = subDefinitionReturnStack.back();
                         popChildren(false, true); // only delete children, do not pop stacks
                     }
                     return true;

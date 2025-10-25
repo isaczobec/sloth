@@ -1,6 +1,7 @@
 #include "control_flow_handler.h"
 #include "../tokenization/tokenizer.h"
 #include "../syntax-parsing/syntax_rules.h"
+#include "../file-reading/file_reader.h"
 
 #include <iostream>
 #include <string>
@@ -85,6 +86,9 @@ namespace ControlFlow {
             s.append(1, (char)c);
         }
         
+        FileReader::SourceFilesManager sm;
+        sm.ReadSourceFile(std::string(filename), *this);
+
         Tokenization::Tokenizer t;
 
         NewStep();
