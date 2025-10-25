@@ -2,6 +2,7 @@
 #include <vector>
 #include <iostream>
 #include "../flow-handler/control_flow_handler.h"
+#include <unordered_map>
 
 namespace FileReader {
     
@@ -11,17 +12,24 @@ namespace FileReader {
         std::string fileName;
         /* The raw stream of characters from this file.*/
         std::string stream;
+
+        FileStream(std::string fileName, size_t fileSize);
     };
 
     class SourceFilesManager {
         
         std::vector<FileStream> fileStreams;
+        /* A map of indicies into fileStreams for fast lookups.*/
+        std::unordered_map<std::string, size_t> fileStreamIndexMap; 
 
         public:
         SourceFilesManager();
         ~SourceFilesManager();
 
         void ReadSourceFile(std::string fileName, ControlFlow::ControlFlowHandler& fh);
+        FileStream* GetTopFileStream();
+        FileStream* GetFileStream(std::string fileName);
+
     };
     
 }

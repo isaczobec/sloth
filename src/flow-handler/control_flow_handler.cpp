@@ -78,33 +78,22 @@ namespace ControlFlow {
     void ControlFlowHandler::Compile(const char* filename) {
         using namespace ParseTree;
 
-        std::FILE* file = std::fopen(filename,"r");
-
-        std::string s;
-        int c;
-        while ((c = std::fgetc(file)) != EOF) {
-            s.append(1, (char)c);
-        }
-        
+        // File reading
         FileReader::SourceFilesManager sm;
+        NewStep(); 
         sm.ReadSourceFile(std::string(filename), *this);
-
-        Tokenization::Tokenizer t;
-
-        NewStep();
-        t.Tokenize(s, *this);
-
-        for (Tokenization::Token token : t.GetTokens()) {
-            std::cout << (int)token.type << std::endl;
-        }
         
+        // Tokenization
+        Tokenization::Tokenizer t;
+        NewStep();
+        t.Tokenize(sm.GetTopFileStream()->stream, *this);
+
+        // Parse tree creation
         ParseTreeBuilder builder;
         int tokenPtr = 0;
         ParseTreeNode* node = builder.ParseNode(&Rules::STATEMENT, t.GetTokens(), tokenPtr, *this);
 
-        std::cout << "sadsa" << std::endl;
-
-        std::fclose(file);
+        std::cout << "done" << std::endl;
 
     }
 }

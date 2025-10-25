@@ -2,6 +2,12 @@
 
 namespace FileReader {
 
+    FileStream::FileStream(std::string fileName, size_t fileSize)
+        : stream(fileSize, '\0') 
+    {
+        this->fileName = fileName;
+    }
+
     // for now, leave empty
     SourceFilesManager::SourceFilesManager() {}
     SourceFilesManager::~SourceFilesManager() {}
@@ -22,17 +28,34 @@ namespace FileReader {
             return;
         }
 
-        int c;
         
         fseek(file, 0, SEEK_END);
         size_t fileSize = ftell(file);
         fseek(file, 0, SEEK_SET);
         
-        std::string s(fileSize, '\0');
-        std::fread(&s[0], 1, fileSize, file);
+        // add an entry to the `fileStreams` vector
+        fileStreamIndexMap[filename] = fileStreams.size();
+        fileStreams.emplace_back(filename, fileSize);
+        
+        std::fread(&fileStreams.back().stream[0], 1, fileSize, file);
 
-        std::cout << "read " << s << " from the file.";
+        std::cout << "read " << fileStreams.back().stream << " from the file.\n";
 
         std::fclose(file);
+
+        fh.CompleteStep(ControlFlow::STATUSCODE_SUCCESS_CONTINUE, false);
+    }
+
+    FileStream* SourceFilesManager::GetFileStream(std::string fileName) {
+
+        auto fileIndexIter = fileStreamIndexMap.find(fileName);
+        if (fileIndexIter == fileStreamIndexMap.end()) {
+            throw std::logic_error("A file with that name has not been added to the file streams list.");
+            return nullptr;
+        }
+        return &fileStreams[fileIndexIter->second];
+    }
+    FileStream* SourceFilesManager::GetTopFileStream() {
+        return &fileStreams.back();
     }
 }
