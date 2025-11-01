@@ -45,10 +45,9 @@ namespace Tokenization {
         size_t dataSizeBytes;
         void* tokenData = NULL;
 
-        size_t sourceFileIndex; // The index of the source file in `SourceFilesManager` of this token.
-        size_t lineNumber;      // the line number this token appeared on.
+        FileReader::SourceString sourceString;
 
-        Token(TokenType type, size_t dataSizeBytes, void* tokenData, size_t sourceFileIndex, size_t lineNumber);
+        Token(TokenType type, size_t dataSizeBytes, void* tokenData, size_t sourceFileIndex, size_t lineNumber, size_t startIndex, size_t length);
     };
     
     typedef void (*TokenDataParser)(std::string_view matchedString, void* dataWriteDestination, size_t* dataSizeBytes, ControlFlow::ControlFlowHandler& flowHandler);

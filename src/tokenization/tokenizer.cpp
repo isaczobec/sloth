@@ -4,12 +4,12 @@
 
 using namespace Tokenization;
 
-Token::Token(TokenType type, size_t dataSizeBytes, void* tokenData, size_t sourceFileIndex, size_t lineNumber) {
+Token::Token(TokenType type, size_t dataSizeBytes, void* tokenData, size_t sourceFileIndex, size_t lineNumber, size_t startIndex, size_t length) 
+    : sourceString(sourceFileIndex, lineNumber, startIndex, length)
+{
     this->type = type; 
     this->dataSizeBytes = dataSizeBytes; 
     this->tokenData = tokenData; 
-    this->sourceFileIndex = sourceFileIndex; 
-    this->lineNumber = lineNumber;
 }
 
 Tokenizer::Tokenizer() {
@@ -66,7 +66,7 @@ void Tokenizer::Tokenize(FileReader::FileStream* fileStream, ControlFlow::Contro
                 }
 
                 // construct and emplace the token, advance the data pointer
-                tokens.emplace_back(tokenRegexPair.first, tokenDataSizeBytes, (void*)(tokenData+tokenDataPtr));
+                tokens.emplace_back(tokenRegexPair.first, tokenDataSizeBytes, (void*)(tokenData+tokenDataPtr), fileStream->fileIndex, currentLine, s_ptr, tokenMatch.length());
                 tokenDataPtr += tokenDataSizeBytes; // since `tokenDataSizeBytes` is initialized to 0, the data pointer does not advance if no parser was found
 
                 s_ptr += tokenMatch.length();
@@ -76,7 +76,9 @@ void Tokenizer::Tokenize(FileReader::FileStream* fileStream, ControlFlow::Contro
         }
             if (found == false) {
             // if no token could be parsed, throw error
-            flowHandler.Error(ControlFlow::CompilationErrorSeverity::ERROR, ControlFlow::ERRCODE_UNKNOWN_TOKEN, "Invalid token");
+            flowHandler.Error(ControlFlow::CompilationErrorSeverity::ERROR, ControlFlow::ERRCODE_UNKNOWN_TOKEN, "Invalid token", 
+                FileReader::SourceString(fileStream->fileIndex, currentLine, s_ptr, 1)
+            );
             flowHandler.CompleteStep(ControlFlow::STATUSCODE_ERROR_EXIT);
             return;
         }

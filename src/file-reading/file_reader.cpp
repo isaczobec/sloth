@@ -1,6 +1,9 @@
 #include "file_reader.h"
+#include "../flow-handler/control_flow_handler.h"
 
 namespace FileReader {
+
+    SourceFilesManager sourceFilesManager;
 
     FileStream::FileStream(std::string fileName, size_t fileSize, size_t fileIndex)
         : stream(fileSize, '\0') 
@@ -12,6 +15,57 @@ namespace FileReader {
     // for now, leave empty
     SourceFilesManager::SourceFilesManager() {}
     SourceFilesManager::~SourceFilesManager() {}
+
+    bool SourceString::IsNull() const {
+        return fileIndex == SOURCESTRING_NULL_INDICATOR;
+    }
+
+    SourceString::SourceString() {
+        fileIndex = SOURCESTRING_NULL_INDICATOR;
+        startIndex = 0;
+        length = 0;
+        lineNumber = 0;
+    }
+
+    SourceString::SourceString(int fileIndex, size_t lineNumber, size_t startIndex, size_t length) {
+        this->fileIndex = fileIndex;
+        this->lineNumber = lineNumber;
+        this->startIndex = startIndex;
+        this->length = length;
+    }
+
+    std::string SourceString::FileName() const {
+        return sourceFilesManager.GetFileStream(fileIndex)->fileName;
+    }
+
+    std::string_view SourceString::GetString(bool entireLine) const {
+        std::string_view view(sourceFilesManager.GetFileStream(fileIndex)->stream);
+
+        if (entireLine) {
+            size_t l = view.rfind('\n', startIndex);
+            size_t r = view.find('\n', startIndex + length);
+            if (l == std::string::npos) {l = 0;}
+            if (r == std::string::npos) {r = view.length() - 1;}
+            return view.substr(l, r-l+1);
+        } else {
+            return view.substr(startIndex, length);
+        }
+    }
+
+    std::string SourceString::GetUnderlineString() const {
+        std::string_view view(sourceFilesManager.GetFileStream(fileIndex)->stream);
+        size_t l = view.rfind('\n', startIndex);
+        size_t r = view.find('\n', startIndex + length);
+        if (l == std::string::npos) {l = 0;}
+        if (r == std::string::npos) {r = view.length() - 1;}
+
+        // construct the underline string
+        std::string s(r-l+1, ' ');
+        for (size_t i = startIndex - l; i < startIndex - l + length; i++) {
+            s[i] = '^';
+        }
+        return s;
+    }
     
     void SourceFilesManager::ReadSourceFile(std::string filename, ControlFlow::ControlFlowHandler& fh) {
 
@@ -24,7 +78,8 @@ namespace FileReader {
             fh.Error(
                 ControlFlow::CompilationErrorSeverity::ERROR, 
                 ControlFlow::ERRCODE_UNREADABLE_FILE,
-                errorMessage
+                errorMessage,
+                SourceString()
             );
             return;
         }
@@ -56,6 +111,16 @@ namespace FileReader {
         }
         return &fileStreams[fileIndexIter->second];
     }
+
+    FileStream* SourceFilesManager::GetFileStream(size_t fileIndex) {
+
+        if (fileIndex >= fileStreams.size()) {
+            throw std::logic_error("The fileIndex was out of range!");
+            return nullptr;
+        }
+        return &fileStreams[fileIndex];
+    }
+
     FileStream* SourceFilesManager::GetTopFileStream() {
         return &fileStreams.back();
     }
