@@ -1,5 +1,6 @@
 #pragma once
 #include "../flow-handler/control_flow_handler.h"
+#include "../file-reading/file_reader.h"
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -43,8 +44,11 @@ namespace Tokenization {
         TokenType type;
         size_t dataSizeBytes;
         void* tokenData = NULL;
-        
-        Token(TokenType type, size_t dataSizeBytes, void* tokenData);
+
+        size_t sourceFileIndex; // The index of the source file in `SourceFilesManager` of this token.
+        size_t lineNumber;      // the line number this token appeared on.
+
+        Token(TokenType type, size_t dataSizeBytes, void* tokenData, size_t sourceFileIndex, size_t lineNumber);
     };
     
     typedef void (*TokenDataParser)(std::string_view matchedString, void* dataWriteDestination, size_t* dataSizeBytes, ControlFlow::ControlFlowHandler& flowHandler);
@@ -65,7 +69,7 @@ namespace Tokenization {
         Tokenizer();
         ~Tokenizer();
 
-        void Tokenize(std::string& fileString, ControlFlow::ControlFlowHandler& flowHandler);
+        void Tokenize(FileReader::FileStream* fileStream, ControlFlow::ControlFlowHandler& flowHandler);
         std::vector<Token>& GetTokens();
     };
     

@@ -13,7 +13,9 @@ namespace FileReader {
         /* The raw stream of characters from this file.*/
         std::string stream;
 
-        FileStream(std::string fileName, size_t fileSize);
+        size_t fileIndex;
+
+        FileStream(std::string fileName, size_t fileSize, size_t fileIndex);
     };
 
     class SourceFilesManager {
@@ -26,7 +28,7 @@ namespace FileReader {
         SourceFilesManager();
         ~SourceFilesManager();
 
-        void ReadSourceFile(std::string fileName, ControlFlow::ControlFlowHandler& fh);
+        void ReadSourceFile(std::string fileName, ControlFlow::ControlFlowHandler& fh); // Reads the contents of `fileName` and emplaces a new `FileStream` at the back of `fileStreams`.
         FileStream* GetTopFileStream();
         FileStream* GetFileStream(std::string fileName);
 

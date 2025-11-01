@@ -4,10 +4,12 @@
 
 using namespace Tokenization;
 
-Token::Token(TokenType type, size_t dataSizeBytes, void* tokenData) {
+Token::Token(TokenType type, size_t dataSizeBytes, void* tokenData, size_t sourceFileIndex, size_t lineNumber) {
     this->type = type; 
     this->dataSizeBytes = dataSizeBytes; 
     this->tokenData = tokenData; 
+    this->sourceFileIndex = sourceFileIndex; 
+    this->lineNumber = lineNumber;
 }
 
 Tokenizer::Tokenizer() {
@@ -15,11 +17,12 @@ Tokenizer::Tokenizer() {
     tokenDataSizeBytes = 0;
 }
 
-void Tokenizer::Tokenize(std::string& fileString, ControlFlow::ControlFlowHandler& flowHandler) {
+void Tokenizer::Tokenize(FileReader::FileStream* fileStream, ControlFlow::ControlFlowHandler& flowHandler) {
     
     // create a string view and a pointer to the current character
     size_t s_ptr = 0;
-    std::string_view s(fileString);
+    std::string_view s(fileStream->stream);
+    size_t currentLine = 1;
 
     size_t tokenDataPtr = 0;
 
@@ -31,6 +34,9 @@ void Tokenizer::Tokenize(std::string& fileString, ControlFlow::ControlFlowHandle
 
         // skip whitespaces
         if (std::isspace(s.at(s_ptr))) {
+            if (s.at(s_ptr) == '\n') {
+                ++currentLine;
+            }
             ++s_ptr;
             continue;
         }

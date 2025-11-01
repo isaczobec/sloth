@@ -2,10 +2,11 @@
 
 namespace FileReader {
 
-    FileStream::FileStream(std::string fileName, size_t fileSize)
+    FileStream::FileStream(std::string fileName, size_t fileSize, size_t fileIndex)
         : stream(fileSize, '\0') 
     {
         this->fileName = fileName;
+        this->fileIndex = fileIndex;
     }
 
     // for now, leave empty
@@ -35,7 +36,7 @@ namespace FileReader {
         
         // add an entry to the `fileStreams` vector
         fileStreamIndexMap[filename] = fileStreams.size();
-        fileStreams.emplace_back(filename, fileSize);
+        fileStreams.emplace_back(filename, fileSize, fileStreams.size());
         
         std::fread(&fileStreams.back().stream[0], 1, fileSize, file);
 
