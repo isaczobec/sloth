@@ -15,7 +15,8 @@
 namespace Tokenization {
 
     enum class TokenType {
-        NONE,
+        NONE,    // tokentype used to indicate in a `RuleComponent` that it is not a token
+        UNKNOWN, // token that is added to the stream upon trying to parse an unknown token
 
         BRACKET_CURLY_LEFT,
         BRACKET_CURLY_RIGHT,
@@ -48,7 +49,9 @@ namespace Tokenization {
         FileReader::SourceString sourceString;
 
         Token(TokenType type, size_t dataSizeBytes, void* tokenData, size_t sourceFileIndex, size_t lineNumber, size_t startIndex, size_t length);
+        Token(); // Creates a token with `TokenType::UNKNOWN`
     };
+
     
     typedef void (*TokenDataParser)(std::string_view matchedString, void* dataWriteDestination, size_t* dataSizeBytes, ControlFlow::ControlFlowHandler& flowHandler);
     extern const std::unordered_map<TokenType, TokenDataParser> tokenDataParserMap;

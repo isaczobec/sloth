@@ -44,8 +44,8 @@ namespace FileReader {
         if (entireLine) {
             size_t l = view.rfind('\n', startIndex);
             size_t r = view.find('\n', startIndex + length);
-            if (l == std::string::npos) {l = 0;}
-            if (r == std::string::npos) {r = view.length() - 1;}
+            if (l == std::string::npos) {l = 0;} else {l+=1;}
+            if (r == std::string::npos) {r = view.length() - 1;} else {r-=1;}
             return view.substr(l, r-l+1);
         } else {
             return view.substr(startIndex, length);
@@ -56,8 +56,8 @@ namespace FileReader {
         std::string_view view(sourceFilesManager.GetFileStream(fileIndex)->stream);
         size_t l = view.rfind('\n', startIndex);
         size_t r = view.find('\n', startIndex + length);
-        if (l == std::string::npos) {l = 0;}
-        if (r == std::string::npos) {r = view.length() - 1;}
+        if (l == std::string::npos) {l = 0;} else {l+=1;}
+        if (r == std::string::npos) {r = view.length() - 1;} else {r-=1;}
 
         // construct the underline string
         std::string s(r-l+1, ' ');

@@ -21,6 +21,7 @@ namespace ControlFlow {
     constexpr inline int STATUSCODE_SUCCESS_CONTINUE =  0;
     constexpr inline int STATUSCODE_WARNING_CONTINUE =  1;
     constexpr inline int STATUSCODE_ERROR_EXIT       =  2;
+    constexpr inline int STATUSCODE_ERROR_CONTINUE   =  3;
     
     // other constants
     /* signals that no next or substep exists.*/
