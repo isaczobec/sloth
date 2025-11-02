@@ -247,6 +247,12 @@ namespace ParseTree {
                     subDefIsOptionalStack.push_back(false);
                     subDefChildStartStack.push_back(node->children.size());
                     subDefTokenStartStack.push_back(node->tokens.size());
+
+                    // reset required succes block if it has been successfully parsed
+                    if (isInRequiredSuccessSubDefinition && subDefinitionReturnStack.size() <= requiredSuccesStartLevel) {
+                        isInRequiredSuccessSubDefinition = false;
+                        requiredSuccesStartLevel = 0;
+                    }
                     continue;
                 }
                 
@@ -272,13 +278,6 @@ namespace ParseTree {
                     subDefinitionReturnStack.pop_back();
                     subDefIsOptionalStack.pop_back(); // TODO: check if it is not optional, otherwise rules are wrongly defined
                     popChildren(true, false);
-                    
-                    // reset required succes block if it has been successfully parsed
-                    if (isInRequiredSuccessSubDefinition && subDefinitionReturnStack.size() <= requiredSuccesStartLevel) {
-                        isInRequiredSuccessSubDefinition = false;
-                        requiredSuccesStartLevel = 0;
-                    }
-
                     continue;
                 }
                 
