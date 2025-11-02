@@ -231,8 +231,10 @@ namespace ParseTree {
                     // if we found an OR directive or end of optional subdefinition and do not need to exit
                     if (!gotoNextParsePoint(dcidx, rule)) {
                         // if we are in a required subdefinition, raise an error when parsing fails
-                        if (isInRequiredSuccessSubDefinition) 
+                        if (isInRequiredSuccessSubDefinition) {
                             handleParseError(dc, &tokens[tokenPtr], ParseErrorType::RULE, false, true, dcidx);
+                            return node;
+                        }
                             
                         failed = true;
                         break;
@@ -248,11 +250,6 @@ namespace ParseTree {
                     subDefChildStartStack.push_back(node->children.size());
                     subDefTokenStartStack.push_back(node->tokens.size());
 
-                    // reset required succes block if it has been successfully parsed
-                    if (isInRequiredSuccessSubDefinition && subDefinitionReturnStack.size() <= requiredSuccesStartLevel) {
-                        isInRequiredSuccessSubDefinition = false;
-                        requiredSuccesStartLevel = 0;
-                    }
                     continue;
                 }
                 
@@ -262,6 +259,12 @@ namespace ParseTree {
                     subDefinitionReturnStack.pop_back();
                     subDefIsOptionalStack.pop_back(); // TODO: check if it is not optional, otherwise rules are wrongly defined
                     popChildren(true, false);
+                    
+                    // Reset required success flag when we successfully exit the required subdefinition
+                    if (isInRequiredSuccessSubDefinition && subDefinitionReturnStack.size() < requiredSuccesStartLevel) {
+                        isInRequiredSuccessSubDefinition = false;
+                        requiredSuccesStartLevel = 0;
+                    }
                     continue;
                 }
                 
@@ -333,8 +336,10 @@ namespace ParseTree {
                 } else {
 
                     if (!gotoNextParsePoint(dcidx, rule)) {
-                        if (isInRequiredSuccessSubDefinition) 
+                        if (isInRequiredSuccessSubDefinition) {
                             handleParseError(dc, &tokens[tokenPtr], ParseErrorType::TOKEN, false, true, dcidx);
+                            return node;
+                        }
 
                         failed = true;
                         break;
