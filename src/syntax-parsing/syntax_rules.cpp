@@ -35,6 +35,7 @@ namespace ParseTree {
     ParseTreeNode::ParseTreeNode(ParseTreeNode* parent, Rule* rule) {
         this->parent = parent;
         this->rule = rule;
+        this->error = PARSETREENODE_NO_ERROR;
     }
 
     ParseTreeNode::~ParseTreeNode() {
@@ -44,22 +45,37 @@ namespace ParseTree {
         }
     }
 
+    bool ParseTreeNode::HadError() {
+        return (error != PARSETREENODE_NO_ERROR);
+    }
+
     ParseTreeBuilder::ParseTreeBuilder() {
         CreateRules();
+
+        // assign which rules are recovery rules
+        recoveryRules.push_back(&Rules::STATEMENT_TERMINATOR);
     }
 
     ParseTreeBuilder::~ParseTreeBuilder() {}
 
-    ParseTreeNode* ParseTreeBuilder::ParseNode(Rule* rule, std::vector<Token>& tokens, int& tokenPtr, ControlFlow::ControlFlowHandler& flowHandler) {
+    ParseTreeNode* ParseTreeBuilder::ParseNode(
+        Rule* rule, std::vector<Token>& tokens, int& tokenPtr, 
+        bool recover, ControlFlow::ControlFlowHandler& flowHandler
+    ) {
 
         ParseTreeNode* node = new ParseTreeNode(NULL, rule);
 
+        // TODO: all the stacks used throughout this functions could be more cleanly organized
+
         /* Indexes into the token stream, of where we should return to if parsing an alternative for a subdefinition fails*/
+        int initialTokenPtr = tokenPtr;
         std::vector<size_t> subDefinitionReturnStack;
         std::vector<bool> subDefIsOptionalStack; // if the subdefinitions in `subDefinitionReturnStack` are optional
         std::vector<size_t> subDefTokenStartStack; // A stack keeping track of where subdefinition tokens start, so they can be popped if parsing a subdefinition fails
         std::vector<size_t> subDefChildStartStack; // A stack keeping track of where subdefinition children start, so they can be popped if parsing a subdefinition fails
 
+        bool isInRequiredSuccessSubDefinition = false;
+        size_t requiredSuccesStartLevel = 0; // which subdefinition level the required success began at
 
         const auto popChildren = [&subDefTokenStartStack, &subDefChildStartStack, node](bool popStacks = true, bool deletechildren = true) {
             if (subDefTokenStartStack.empty() || subDefChildStartStack.empty()) return;
@@ -132,8 +148,57 @@ namespace ParseTree {
             return false;
         };
 
-        
         bool failed = false; 
+
+        const auto handleParseError = [&] (
+            DefinitionComponent& dc, Token* currentToken, ParseErrorType errorType,
+            bool recover = false, bool raiseError = false, int& dcidx
+        ) {
+
+            // construct error message string
+
+            if (raiseError) {
+                std::string errorMessage;
+                if (errorType == ParseErrorType::TOKEN) {
+                    errorMessage += "Expected '";
+                    errorMessage.append(std::to_string((long int)dc.token)); // TODO: Replace this with a readable token name
+                    errorMessage += "', got ";
+                    errorMessage.append(std::to_string((long int)currentToken->type)); // TODO: Replace this with a readable token name
+                } 
+                else if (errorType == ParseErrorType::RULE) {
+                    errorMessage += "Invalid '";
+                    errorMessage.append(std::to_string((long int)dc.rule)); // TODO: Replace this with a readable rule name
+                }
+                
+                ControlFlow::CompilationError* error = flowHandler.Error(
+                    ControlFlow::CompilationErrorSeverity::ERROR,
+                    ControlFlow::ERRCODE_SYNTAX_ERROR,
+                    errorMessage,
+                    currentToken->sourceString
+                );
+                node->error = error;
+            }
+
+            // attempt to move forward and parse a recovery rule
+            if (recover) {
+                while (tokenPtr < tokens.size()) {
+                    for (Rule* recoveryRule : recoveryRules) {
+
+                        ParseTreeNode* recoveryNode = ParseNode(recoveryRule, tokens, tokenPtr, false, flowHandler);
+                        if (recoveryNode == NULL) {
+                            tokenPtr += 1;
+                        } else {
+                            return true;
+                        }
+                    }
+                }
+                return false; // if no recovery token could be parsed
+            }
+          
+            return false; // return false if recovery was not specified
+        };
+
+        
         for (int dcidx = 0; dcidx < (*rule).definition.size(); ++dcidx) {
             DefinitionComponent& dc = (*rule).definition[dcidx];
 
@@ -141,16 +206,34 @@ namespace ParseTree {
             if (dc.rule != RULECOMPONENT_NO_RULE) {
 
                 // try to parse the child node, add it to the tree if it exists
-                ParseTreeNode* childNode = ParseNode(dc.rule, tokens, tokenPtr, flowHandler);   
+                ParseTreeNode* childNode = ParseNode(dc.rule, tokens, tokenPtr, false, flowHandler);   
                 if (childNode != NULL) {
-                    childNode->parent = node;
-                    node->children.push_back(childNode);
+
+                    // check if there was an error in the child node
+                    if (childNode->HadError())  {
+                        if (recover) {
+                            handleParseError(dc, &tokens[tokenPtr], ParseErrorType::RULE, true, false, dcidx);
+                        } else {
+                            node->error = childNode->error;
+                            childNode->parent = node;
+                            node->children.push_back(childNode);
+                        }
+                    } else {
+
+                        // nomrally push back the child node
+                        childNode->parent = node;
+                        node->children.push_back(childNode);
+                    }
+
                 } else {
                     // the child node did adhere to the syntax, delete created nodes and return `NULL` (the parsing failed)
-
                     // look forward and try to find an `OR` directive or optional subsdefinition ender.
                     // if we found an OR directive or end of optional subdefinition and do not need to exit
                     if (!gotoNextParsePoint(dcidx, rule)) {
+                        // if we are in a required subdefinition, raise an error when parsing fails
+                        if (isInRequiredSuccessSubDefinition) 
+                            handleParseError(dc, &tokens[tokenPtr], ParseErrorType::RULE, false, true, dcidx);
+                            
                         failed = true;
                         break;
                     }
@@ -189,6 +272,13 @@ namespace ParseTree {
                     subDefinitionReturnStack.pop_back();
                     subDefIsOptionalStack.pop_back(); // TODO: check if it is not optional, otherwise rules are wrongly defined
                     popChildren(true, false);
+                    
+                    // reset required succes block if it has been successfully parsed
+                    if (isInRequiredSuccessSubDefinition && subDefinitionReturnStack.size() <= requiredSuccesStartLevel) {
+                        isInRequiredSuccessSubDefinition = false;
+                        requiredSuccesStartLevel = 0;
+                    }
+
                     continue;
                 }
                 
@@ -221,6 +311,12 @@ namespace ParseTree {
                     }
                 }
 
+                else if (dc.directive == D_RSUC) {
+                    // note where we were upon entering a required success subdefinition
+                    requiredSuccesStartLevel = subDefinitionReturnStack.size();
+                    isInRequiredSuccessSubDefinition = true;
+                }
+
             } else if (dc.token != RULECOMPONENT_NO_TOKEN) {
 
                 // if there are too few tokens left in the stream
@@ -229,7 +325,7 @@ namespace ParseTree {
                     // if we are inside an optional inclusion, it is fine that there are no more tokens left
                     if (!(subDefinitionReturnStack.size() >= 1 && subDefIsOptionalStack[0])) {
                         failed = true;
-                        return NULL;
+                        break;
                     }
                 } 
                 else if (tokens[tokenPtr].type == dc.token) {
@@ -238,6 +334,9 @@ namespace ParseTree {
                 } else {
 
                     if (!gotoNextParsePoint(dcidx, rule)) {
+                        if (isInRequiredSuccessSubDefinition) 
+                            handleParseError(dc, &tokens[tokenPtr], ParseErrorType::TOKEN, false, true, dcidx);
+
                         failed = true;
                         break;
                     }
@@ -253,6 +352,7 @@ namespace ParseTree {
         if (failed) {
             delete node;
             return NULL;
+            tokenPtr = initialTokenPtr; // reset tokenPtr
         }
 
         return node;

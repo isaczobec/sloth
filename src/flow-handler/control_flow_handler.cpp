@@ -29,7 +29,7 @@ namespace ControlFlow {
 
     ControlFlowHandler::~ControlFlowHandler() {} // TODO: no destructor for now
 
-    void ControlFlowHandler::Error(CompilationErrorSeverity severity, unsigned int errorCode, std::string errorMessage, const FileReader::SourceString& sourceString) {
+    CompilationError* ControlFlowHandler::Error(CompilationErrorSeverity severity, unsigned int errorCode, std::string errorMessage, const FileReader::SourceString& sourceString) {
         compilationSteps.back().errors.emplace_back(severity, errorCode, errorMessage, sourceString);
 
         // construct an error string
@@ -52,6 +52,8 @@ namespace ControlFlow {
         }
 
         std::cout << errorString << std::endl;
+
+        return &compilationSteps.back().errors.back();
     }
 
     void ControlFlowHandler::NewStep(bool down) {
@@ -110,7 +112,7 @@ namespace ControlFlow {
         // Parse tree creation
         ParseTreeBuilder builder;
         int tokenPtr = 0;
-        ParseTreeNode* node = builder.ParseNode(&Rules::STATEMENT, t.GetTokens(), tokenPtr, *this);
+        ParseTreeNode* node = builder.ParseNode(&Rules::STATEMENT, t.GetTokens(), tokenPtr, true, *this);
 
         std::cout << "done" << std::endl;
 

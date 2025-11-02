@@ -15,6 +15,7 @@ namespace ControlFlow {
     // Error codes for compilation (and runtime?) errors 
     constexpr inline int ERRCODE_UNKNOWN_TOKEN = 0;
     constexpr inline int ERRCODE_UNREADABLE_FILE = 1;
+    constexpr inline int ERRCODE_SYNTAX_ERROR = 2;
     
     // status codes for compilation (and runtime?) results. Tells the flow handler what to do next 
     constexpr inline int STATUSCODE_NOT_FINNISHED    = -1;
@@ -69,7 +70,7 @@ namespace ControlFlow {
         ControlFlowHandler();
         ~ControlFlowHandler();
 
-        void Error(CompilationErrorSeverity severity, unsigned int errorCode, std::string errorMessage, const FileReader::SourceString& sourceString); 
+        CompilationError* Error(CompilationErrorSeverity severity, unsigned int errorCode, std::string errorMessage, const FileReader::SourceString& sourceString); 
         void NewStep(bool down = false);
         void CompleteStep(int statusCode = STATUSCODE_SUCCESS_CONTINUE, bool up = false);  // TODO: replace up down next with enums
 
