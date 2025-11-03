@@ -93,8 +93,8 @@ namespace ParseTree {
             }
 
             if (popStacks) {
-                subDefChildStartStack.pop_back();
-                subDefTokenStartStack.pop_back();
+                if (!subDefChildStartStack.empty()) subDefChildStartStack.pop_back();
+                if (!subDefTokenStartStack.empty()) subDefTokenStartStack.pop_back();
             }
         };
 
@@ -111,8 +111,8 @@ namespace ParseTree {
             int scopeLevelInitial = subDefinitionReturnStack.size() - 1;
             int scopeLevel = scopeLevelInitial;
 
-            while (dcidx < (*rule).definition.size()) {
-                dcidx++;
+            for (int i = dcidx + 1; i < (*rule).definition.size(); ++i) {
+                dcidx = i;
 
                 if ((*rule).definition[dcidx].directive == D_SBST || (*rule).definition[dcidx].directive == D_OPST) {
                     scopeLevel++;
@@ -122,14 +122,14 @@ namespace ParseTree {
                 if ((*rule).definition[dcidx].directive == D_SBED && scopeLevel <= scopeLevelInitial) {
                     scopeLevel--;
                     tokenPtr = subDefinitionReturnStack.back();
-                    subDefinitionReturnStack.pop_back();
-                    subDefIsOptionalStack.pop_back();
+                    if (!subDefinitionReturnStack.empty()) subDefinitionReturnStack.pop_back();
+                    if (!subDefIsOptionalStack.empty()) subDefIsOptionalStack.pop_back();
                     popChildren();
                     
                 } else if ((*rule).definition[dcidx].directive == D_OPED && scopeLevel <= scopeLevelInitial) {
                     tokenPtr = subDefinitionReturnStack.back();
-                    subDefinitionReturnStack.pop_back();
-                    subDefIsOptionalStack.pop_back();
+                    if (!subDefinitionReturnStack.empty()) subDefinitionReturnStack.pop_back();
+                    if (!subDefIsOptionalStack.empty()) subDefIsOptionalStack.pop_back();
                     popChildren();
                     if (scopeLevel <= scopeLevelInitial) {
                         return true;
@@ -245,6 +245,9 @@ namespace ParseTree {
 
                 // if there is a subdefinition starting, push the current token ptr to the return stack
                 if (dc.directive == D_SBST) {
+
+                    std::cout << "size is " << subDefIsOptionalStack.size() << std::endl;
+
                     subDefinitionReturnStack.push_back(tokenPtr);
                     subDefIsOptionalStack.push_back(false);
                     subDefChildStartStack.push_back(node->children.size());
@@ -256,8 +259,8 @@ namespace ParseTree {
                 
                 // if we made it to the end of a subdefinition, pop the top return index
                 else if (dc.directive == D_SBED) {
-                    subDefinitionReturnStack.pop_back();
-                    subDefIsOptionalStack.pop_back(); // TODO: check if it is not optional, otherwise rules are wrongly defined
+                    if (!subDefinitionReturnStack.empty()) subDefinitionReturnStack.pop_back();
+                    if (!subDefIsOptionalStack.empty()) subDefIsOptionalStack.pop_back(); // TODO: check if it is not optional, otherwise rules are wrongly defined
                     popChildren(true, false);
                     
                     // Reset required success flag when we successfully exit the required subdefinition
@@ -278,8 +281,8 @@ namespace ParseTree {
                     continue;
                 }
                 else if (dc.directive == D_OPED) {
-                    subDefinitionReturnStack.pop_back();
-                    subDefIsOptionalStack.pop_back(); // TODO: check if it is not optional, otherwise rules are wrongly defined
+                    if (!subDefinitionReturnStack.empty()) subDefinitionReturnStack.pop_back();
+                    if (!subDefIsOptionalStack.empty()) subDefIsOptionalStack.pop_back(); // TODO: check if it is not optional, otherwise rules are wrongly defined
                     popChildren(true, false);
                     continue;
                 }
@@ -297,8 +300,8 @@ namespace ParseTree {
                     } else {
                         // we are in a subdefinition, pop the return index and go forward
                         // until the end of the subdefinition
-                        subDefinitionReturnStack.pop_back();
-                        subDefIsOptionalStack.pop_back();
+                        if (!subDefinitionReturnStack.empty()) subDefinitionReturnStack.pop_back();
+                        if (!subDefIsOptionalStack.empty()) subDefIsOptionalStack.pop_back();
                         popChildren(true, false);
 
                         while ((*rule).definition[dcidx].directive != D_SBED && (*rule).definition[dcidx].directive != D_OPED) {
@@ -325,7 +328,7 @@ namespace ParseTree {
                 if (tokens.size() <= tokenPtr) {
 
                     // if we are inside an optional inclusion, it is fine that there are no more tokens left
-                    if (!(subDefinitionReturnStack.size() >= 1 && subDefIsOptionalStack[0])) {
+                    if (!(!subDefinitionReturnStack.empty() && subDefIsOptionalStack[0])) {
                         failed = true;
                         break;
                     }
