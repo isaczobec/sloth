@@ -1,7 +1,7 @@
 #include "control_flow_handler.h"
+#include "../file-reading/file_reader.h"
 #include "../tokenization/tokenizer.h"
 #include "../syntax-parsing/syntax_rules.h"
-#include "../file-reading/file_reader.h"
 
 #include <iostream>
 #include <string>
@@ -13,8 +13,8 @@
 
 namespace ControlFlow {
 
-    CompilationError::CompilationError(CompilationErrorSeverity severity, unsigned int errorCode, std::string errorMessage) 
-        : errorMessage(errorMessage), severity(severity), errorCode(errorCode) {}
+    CompilationError::CompilationError(CompilationErrorSeverity severity, unsigned int errorCode, std::string errorMessage, FileReader::SourceString sourceString) 
+        : errorMessage(errorMessage), severity(severity), errorCode(errorCode), sourceString(sourceString) {}
 
     bool CompilationStepResult::operator==(const CompilationStepResult& r) const {
         return r.statusCode == statusCode;
@@ -29,9 +29,31 @@ namespace ControlFlow {
 
     ControlFlowHandler::~ControlFlowHandler() {} // TODO: no destructor for now
 
-    void ControlFlowHandler::Error(CompilationErrorSeverity severity, unsigned int errorCode, std::string errorMessage) {
-        compilationSteps.back().errors.emplace_back(severity, errorCode, errorMessage);
-        std::cout << "ERR" << errorCode << ": " << errorMessage << std::endl;
+    CompilationError* ControlFlowHandler::Error(CompilationErrorSeverity severity, unsigned int errorCode, std::string errorMessage, const FileReader::SourceString& sourceString) {
+        compilationSteps.back().errors.emplace_back(severity, errorCode, errorMessage, sourceString);
+
+        // construct an error string
+        std::string errorString;
+        if      (severity == CompilationErrorSeverity::ERROR) {errorString += "Error (";}
+        else if (severity == CompilationErrorSeverity::WARNING) {errorString += "Warning (";}
+        errorString.append(std::to_string(errorCode));
+        errorString += "): ";
+        errorString += errorMessage;
+
+        if (!sourceString.IsNull()) {
+            errorString += "\nat ";
+            errorString += std::to_string(sourceString.lineNumber);
+            errorString += " in ";
+            errorString.append(sourceString.FileName());
+            errorString += "\n";
+            errorString.append(sourceString.GetString(true));
+            errorString += "\n";
+            errorString.append(sourceString.GetUnderlineString());
+        }
+
+        std::cout << errorString << std::endl;
+
+        return &compilationSteps.back().errors.back();
     }
 
     void ControlFlowHandler::NewStep(bool down) {
@@ -79,19 +101,18 @@ namespace ControlFlow {
         using namespace ParseTree;
 
         // File reading
-        FileReader::SourceFilesManager sm;
         NewStep(); 
-        sm.ReadSourceFile(std::string(filename), *this);
+        FileReader::sourceFilesManager.ReadSourceFile(std::string(filename), *this);
         
         // Tokenization
         Tokenization::Tokenizer t;
         NewStep();
-        t.Tokenize(sm.GetTopFileStream()->stream, *this);
+        t.Tokenize(FileReader::sourceFilesManager.GetTopFileStream(), *this);
 
         // Parse tree creation
         ParseTreeBuilder builder;
         int tokenPtr = 0;
-        ParseTreeNode* node = builder.ParseNode(&Rules::STATEMENT, t.GetTokens(), tokenPtr, *this);
+        ParseTreeNode* node = builder.ParseNode(&Rules::STATEMENT, t.GetTokens(), tokenPtr, true, *this);
 
         std::cout << "done" << std::endl;
 

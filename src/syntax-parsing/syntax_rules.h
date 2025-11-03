@@ -14,17 +14,24 @@ namespace ParseTree {
         SUBDEFINITION_END,
         OR,
         OPTIONAL_START,
-        OPTIONAL_END
+        OPTIONAL_END,
+        REQUIRED_SUCCESS
     };
 
     // expressions for increased readability
-    inline constexpr DefinitionDirective D_SBST = DefinitionDirective::SUBDEFINITION_START;
-    inline constexpr DefinitionDirective D_SBED = DefinitionDirective::SUBDEFINITION_END;
-    inline constexpr DefinitionDirective D_OR   = DefinitionDirective::OR;
-    /* `DefinitionComponent`s between this directive and `D_OPED can optionally be included in the current rule.*/
-    inline constexpr DefinitionDirective D_OPST   = DefinitionDirective::OPTIONAL_START;
+    inline constexpr DefinitionDirective D_SBST   = DefinitionDirective::SUBDEFINITION_START;
+    inline constexpr DefinitionDirective D_SBED   = DefinitionDirective::SUBDEFINITION_END;
+    inline constexpr DefinitionDirective D_OR     = DefinitionDirective::OR;
+    inline constexpr DefinitionDirective D_OPST   = DefinitionDirective::OPTIONAL_START;     // `DefinitionComponent`s between this directive and `D_OPED can optionally be included in the current rule.
     inline constexpr DefinitionDirective D_OPED   = DefinitionDirective::OPTIONAL_END;
 
+    /* subdefenitions following immediately after this directive must be 
+       successfully parsed, if not an error will be thrown and the parser 
+       will attempt to find a recovery point. */
+    inline constexpr DefinitionDirective D_RSUC   = DefinitionDirective::REQUIRED_SUCCESS;   
+
+
+    
     inline constexpr TokenType RULECOMPONENT_NO_TOKEN = TokenType::NONE;
     inline constexpr Rule* RULECOMPONENT_NO_RULE = NULL;
     inline constexpr DefinitionDirective RULECOMPONENT_NO_DIRECTIVE = DefinitionDirective::NONE;
@@ -60,6 +67,7 @@ namespace ParseTree {
         inline Rule& operator<<(DefinitionDirective directive) {return AddRuleComponent(directive);}
     };  
 
+    constexpr ControlFlow::CompilationError* PARSETREENODE_NO_ERROR = nullptr;
     struct ParseTreeNode {
 
         /* The children rules of this node, if any.*/
@@ -72,14 +80,24 @@ namespace ParseTree {
         /* The rule that this node has parsed.*/
         Rule* rule;
 
+        ControlFlow::CompilationError* error;
+
         ParseTreeNode(ParseTreeNode* parent, Rule* rule);
         ~ParseTreeNode();
+
+        bool HadError();
+    };
+
+    enum class ParseErrorType {
+        TOKEN,
+        RULE
     };
 
     namespace Rules {
         
         extern Rule STATEMENT;
         extern Rule SCOPE;
+        extern Rule STATEMENT_TERMINATOR;
 
         extern Rule CONTROL_SEQUENCE;
         
@@ -94,12 +112,19 @@ namespace ParseTree {
         extern Rule FUNCITON_CALL;
         extern Rule EXPRESSION;
         extern Rule TERM;
+
     }
 
     /* Populate all rules created in the ParseTree::Rules namespace. */
     void CreateRules();
 
     class ParseTreeBuilder {
+
+        private:
+        /*
+        a list of rules that allows recovery when parsed correctly
+        */ 
+        std::vector<Rule*> recoveryRules;
 
         public:
         ParseTreeBuilder();
@@ -109,6 +134,6 @@ namespace ParseTree {
         Attempt to parse the stream of tokens according to the given rule.
         Returns `NULL` if the stream of tokens did not adhere to the syntax.
         */
-        ParseTreeNode* ParseNode(Rule* rule, std::vector<Token>& tokens, int& tokenPtr, ControlFlow::ControlFlowHandler& flowHandler);
+        ParseTreeNode* ParseNode(Rule* rule, std::vector<Token>& tokens, int& tokenPtr, bool recover, ControlFlow::ControlFlowHandler& flowHandler);
     };
 }

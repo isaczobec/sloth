@@ -4,10 +4,21 @@
 
 using namespace Tokenization;
 
-Token::Token(TokenType type, size_t dataSizeBytes, void* tokenData) {
+Token::Token(TokenType type, size_t dataSizeBytes, void* tokenData, size_t sourceFileIndex, size_t lineNumber, size_t startIndex, size_t length) 
+    : sourceString(sourceFileIndex, lineNumber, startIndex, length)
+{
     this->type = type; 
     this->dataSizeBytes = dataSizeBytes; 
     this->tokenData = tokenData; 
+}
+
+// parameterless constructor to create an "Unknown" token
+Token::Token() 
+    : sourceString()
+{
+    type = TokenType::UNKNOWN; 
+    dataSizeBytes = 0; 
+    tokenData = nullptr; 
 }
 
 Tokenizer::Tokenizer() {
@@ -15,11 +26,16 @@ Tokenizer::Tokenizer() {
     tokenDataSizeBytes = 0;
 }
 
-void Tokenizer::Tokenize(std::string& fileString, ControlFlow::ControlFlowHandler& flowHandler) {
+
+void Tokenizer::Tokenize(FileReader::FileStream* fileStream, ControlFlow::ControlFlowHandler& flowHandler) {
     
+    // track the current status so it can be returned at the end of tokenization
+    int status = ControlFlow::STATUSCODE_SUCCESS_CONTINUE;
+
     // create a string view and a pointer to the current character
     size_t s_ptr = 0;
-    std::string_view s(fileString);
+    std::string_view s(fileStream->stream);
+    size_t currentLine = 1;
 
     size_t tokenDataPtr = 0;
 
@@ -31,6 +47,9 @@ void Tokenizer::Tokenize(std::string& fileString, ControlFlow::ControlFlowHandle
 
         // skip whitespaces
         if (std::isspace(s.at(s_ptr))) {
+            if (s.at(s_ptr) == '\n') {
+                ++currentLine;
+            }
             ++s_ptr;
             continue;
         }
@@ -60,7 +79,7 @@ void Tokenizer::Tokenize(std::string& fileString, ControlFlow::ControlFlowHandle
                 }
 
                 // construct and emplace the token, advance the data pointer
-                tokens.emplace_back(tokenRegexPair.first, tokenDataSizeBytes, (void*)(tokenData+tokenDataPtr));
+                tokens.emplace_back(tokenRegexPair.first, tokenDataSizeBytes, (void*)(tokenData+tokenDataPtr), fileStream->fileIndex, currentLine, s_ptr, tokenMatch.length());
                 tokenDataPtr += tokenDataSizeBytes; // since `tokenDataSizeBytes` is initialized to 0, the data pointer does not advance if no parser was found
 
                 s_ptr += tokenMatch.length();
@@ -70,9 +89,19 @@ void Tokenizer::Tokenize(std::string& fileString, ControlFlow::ControlFlowHandle
         }
             if (found == false) {
             // if no token could be parsed, throw error
-            flowHandler.Error(ControlFlow::CompilationErrorSeverity::ERROR, ControlFlow::ERRCODE_UNKNOWN_TOKEN, "Invalid token");
-            flowHandler.CompleteStep(ControlFlow::STATUSCODE_ERROR_EXIT);
-            return;
+            flowHandler.Error(ControlFlow::CompilationErrorSeverity::ERROR, ControlFlow::ERRCODE_UNKNOWN_TOKEN, "Invalid token", 
+                FileReader::SourceString(fileStream->fileIndex, currentLine, s_ptr, 1)
+            );
+            tokens.emplace_back(); // emplace a null token constructed with parameterless constructor
+            
+            status = ControlFlow::STATUSCODE_ERROR_CONTINUE;
+
+            // attempt to move forward until a whitespace is reached
+            s_ptr += 1;
+            while (!std::isspace(s.at(s_ptr)) && s_ptr < s.length()) {
+                s_ptr += 1;
+            }
+
         }
     }
 
@@ -81,7 +110,7 @@ void Tokenizer::Tokenize(std::string& fileString, ControlFlow::ControlFlowHandle
     flowHandler.NewStep();
     flowHandler.CompleteStep(ControlFlow::STATUSCODE_SUCCESS_CONTINUE, true);
 
-    flowHandler.CompleteStep(ControlFlow::STATUSCODE_SUCCESS_CONTINUE);
+    flowHandler.CompleteStep(status);
 }
 
 std::vector<Token>& Tokenizer::GetTokens() {
