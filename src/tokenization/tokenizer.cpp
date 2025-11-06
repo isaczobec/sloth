@@ -105,6 +105,9 @@ void Tokenizer::Tokenize(FileReader::FileStream* fileStream, ControlFlow::Contro
         }
     }
 
+    // add the end of file token
+    tokens.emplace_back(TokenType::END_OF_FILE, 0, nullptr, fileStream->fileIndex, currentLine, s_ptr, 0);
+
     // a step for finalizing the token parsing.
     // currently just used to go up in the step tree.
     flowHandler.NewStep();

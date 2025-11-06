@@ -18,6 +18,8 @@ namespace Tokenization {
         NONE,    // tokentype used to indicate in a `RuleComponent` that it is not a token
         UNKNOWN, // token that is added to the stream upon trying to parse an unknown token
 
+        END_OF_FILE, // token that signifies the end of file being reached
+
         BRACKET_CURLY_LEFT,
         BRACKET_CURLY_RIGHT,
         BRACKET_NORMAL_LEFT,

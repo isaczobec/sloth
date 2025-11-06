@@ -54,8 +54,17 @@ namespace ParseTree {
 
     struct Rule {
         std::vector<DefinitionComponent> definition;
+
+        // A set of pairs of rules to try to parse to find a recovery point for this definition, 
+        // and which `DefinitionComponent` index of the definition to jump to if the recovery point is found.
+        // If the `size_t` is greater or equal to the amount of definition components, simply finish parsing 
+        // the current node and return it.  
+        std::vector<std::pair<Rule*, size_t>> recoveryRules;
         
         Rule();
+        
+        bool AllowRecover();
+        void AddRecoveryRule(Rule* rule, size_t gotoDefinitonIndex);
 
         // functions to add a definition component, and << operator overload to increase readability
         Rule& AddRuleComponent(Rule* rule);
@@ -67,20 +76,32 @@ namespace ParseTree {
         inline Rule& operator<<(DefinitionDirective directive) {return AddRuleComponent(directive);}
     };  
 
+    enum class NodeChildType {Token, Node};
+    struct NodeChildInfo {
+        NodeChildType type; // the type of this child
+        size_t dcidx;       // which definition component index this child was parsed at
+        NodeChildInfo(NodeChildType type, size_t dcidx);
+    };
+
     constexpr ControlFlow::CompilationError* PARSETREENODE_NO_ERROR = nullptr;
     struct ParseTreeNode {
 
-        /* The children rules of this node, if any.*/
-        std::vector<ParseTreeNode*> children;
-        /* The parent of this node.*/
-        ParseTreeNode* parent;
-        
-        /* the tokens that this rule has parsed, if any.*/
-        std::vector<Token> tokens; // TODO: inneffective to copy the tokens from the existing token vector given from the tokenizer? Safe to just use pointers to the original tokens instead?
         /* The rule that this node has parsed.*/
         Rule* rule;
 
+        /* The children rules of this node, if any.*/
+        std::vector<ParseTreeNode*> children;
+        /* the tokens that this rule has parsed, if any.*/
+        std::vector<Token> tokens; // TODO: inneffective to copy the tokens from the existing token vector given from the tokenizer? Safe to just use pointers to the original tokens instead?
+
+        /* a vector info for the children of the node. */
+        std::vector<NodeChildInfo> childrenInfo; 
+        
+        /* The parent of this node.*/
+        ParseTreeNode* parent;
+        
         ControlFlow::CompilationError* error;
+        bool didRecover;
 
         ParseTreeNode(ParseTreeNode* parent, Rule* rule);
         ~ParseTreeNode();
@@ -95,6 +116,7 @@ namespace ParseTree {
 
     namespace Rules {
         
+        extern Rule STATEMENT_SEQUENCE;
         extern Rule STATEMENT;
         extern Rule SCOPE;
         extern Rule STATEMENT_TERMINATOR;
@@ -121,10 +143,6 @@ namespace ParseTree {
     class ParseTreeBuilder {
 
         private:
-        /*
-        a list of rules that allows recovery when parsed correctly
-        */ 
-        std::vector<Rule*> recoveryRules;
 
         public:
         ParseTreeBuilder();
@@ -134,6 +152,6 @@ namespace ParseTree {
         Attempt to parse the stream of tokens according to the given rule.
         Returns `NULL` if the stream of tokens did not adhere to the syntax.
         */
-        ParseTreeNode* ParseNode(Rule* rule, std::vector<Token>& tokens, int& tokenPtr, bool recover, ControlFlow::ControlFlowHandler& flowHandler);
+        ParseTreeNode* ParseNode(Rule* rule, std::vector<Token>& tokens, int& tokenPtr, ControlFlow::ControlFlowHandler& flowHandler);
     };
 }

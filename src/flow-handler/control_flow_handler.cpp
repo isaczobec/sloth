@@ -112,7 +112,7 @@ namespace ControlFlow {
         // Parse tree creation
         ParseTreeBuilder builder;
         int tokenPtr = 0;
-        ParseTreeNode* node = builder.ParseNode(&Rules::STATEMENT, t.GetTokens(), tokenPtr, true, *this);
+        ParseTreeNode* node = builder.ParseNode(&Rules::STATEMENT, t.GetTokens(), tokenPtr, *this);
 
         std::cout << "done" << std::endl;
 
