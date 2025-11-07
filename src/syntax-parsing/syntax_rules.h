@@ -52,7 +52,10 @@ namespace ParseTree {
         DefinitionComponent(DefinitionDirective directive);
     };
 
+    
     struct Rule {
+
+        std::string name;
         std::vector<DefinitionComponent> definition;
 
         // A set of pairs of rules to try to parse to find a recovery point for this definition, 
@@ -60,8 +63,10 @@ namespace ParseTree {
         // If the `size_t` is greater or equal to the amount of definition components, simply finish parsing 
         // the current node and return it.  
         std::vector<std::pair<Rule*, size_t>> recoveryRules;
+
+        bool throwSyntaxErrors;
         
-        Rule();
+        Rule(std::string name);
         
         bool AllowRecover();
         void AddRecoveryRule(Rule* rule, size_t gotoDefinitonIndex);
@@ -83,6 +88,11 @@ namespace ParseTree {
         NodeChildInfo(NodeChildType type, size_t dcidx);
     };
 
+    enum class ParseNodeStatus {
+        OK,
+        ERROR,
+        ERROR_RECOVERED
+    };
     constexpr ControlFlow::CompilationError* PARSETREENODE_NO_ERROR = nullptr;
     struct ParseTreeNode {
 
@@ -101,7 +111,7 @@ namespace ParseTree {
         ParseTreeNode* parent;
         
         ControlFlow::CompilationError* error;
-        bool didRecover;
+        ParseNodeStatus status;
 
         ParseTreeNode(ParseTreeNode* parent, Rule* rule);
         ~ParseTreeNode();
@@ -115,8 +125,9 @@ namespace ParseTree {
     };
 
     namespace Rules {
-        
-        extern Rule STATEMENT_SEQUENCE;
+
+        extern Rule TOP_STATEMENT_SEQUENCE;
+        extern Rule SCOPE_STATEMENT_SEQUENCE;
         extern Rule STATEMENT;
         extern Rule SCOPE;
         extern Rule STATEMENT_TERMINATOR;

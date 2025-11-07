@@ -13,8 +13,10 @@ namespace ParseTree {
         this->directive = directive;
     }
     
-    Rule::Rule() {
+    Rule::Rule(std::string name) {
+        this->name = name;
         definition.reserve(INITIAL_DEFINITION_COMPONENT_CAPACITY);
+        throwSyntaxErrors = true;
     }
 
     bool Rule::AllowRecover() {
@@ -49,7 +51,7 @@ namespace ParseTree {
         this->parent = parent;
         this->rule = rule;
         this->error = PARSETREENODE_NO_ERROR;
-        didRecover = false;
+        status = ParseNodeStatus::OK;
     }
 
     ParseTreeNode::~ParseTreeNode() {
@@ -60,7 +62,7 @@ namespace ParseTree {
     }
 
     bool ParseTreeNode::HadError() {
-        return (error != PARSETREENODE_NO_ERROR);
+        return (status == ParseNodeStatus::ERROR || status == ParseNodeStatus::ERROR_RECOVERED);
     }
 
     ParseTreeBuilder::ParseTreeBuilder() {
@@ -169,7 +171,7 @@ namespace ParseTree {
 
             // construct error message string
 
-            if (raiseError) {
+            if (raiseError && rule->throwSyntaxErrors) {
                 std::string errorMessage;
                 if (errorType == ParseErrorType::TOKEN) {
                     errorMessage += "Expected '";
@@ -178,8 +180,8 @@ namespace ParseTree {
                     errorMessage.append(std::to_string((long int)currentToken->type)); // TODO: Replace this with a readable token name
                 } 
                 else if (errorType == ParseErrorType::RULE) {
-                    errorMessage += "Invalid '";
-                    errorMessage.append(std::to_string((long int)dc.rule)); // TODO: Replace this with a readable rule name
+                    errorMessage += "Invalid ";
+                    errorMessage.append(rule->name); // TODO: Replace this with a readable rule name
                 }
                 
                 ControlFlow::CompilationError* error = flowHandler.Error(
@@ -197,10 +199,7 @@ namespace ParseTree {
                     for (std::pair<Rule*, size_t> rec : rule->recoveryRules) {
 
                         ParseTreeNode* recoveryNode = ParseNode(rec.first, tokens, tokenPtr, flowHandler);
-                        if (recoveryNode == NULL) {
-                            // did not succesfully parse the recovery token here, step forward and try again
-                            tokenPtr += 1;
-                        } else {
+                        if (recoveryNode != NULL) {
                             // recovery token succesfully parsed
 
                             // delete all the children after the specefied index
@@ -215,15 +214,18 @@ namespace ParseTree {
                             }
 
                             dcidx = rec.second;
-                            node->didRecover = true;
-
+                            node->status = ParseNodeStatus::ERROR_RECOVERED;
+                            
                             return true;
                         }
                     }
+                    tokenPtr += 1; // did not parse a recovery rule here, step forward 
                 }
+                node->status = ParseNodeStatus::ERROR;
                 return false; // if no recovery token could be parsed
             }
-          
+            
+            node->status = ParseNodeStatus::ERROR;
             return false; // return false if recovery was not specified
         };
 
@@ -240,13 +242,14 @@ namespace ParseTree {
 
                     // check if there was an error in the child node
                     if (childNode->HadError())  {
+                        node->error = childNode->error;
                         if (rule->AllowRecover()) {
                             handleParseError(dc, &tokens[tokenPtr], ParseErrorType::RULE, true, false, dcidx);
                         } else {
-                            node->error = childNode->error;
                             childNode->parent = node;
                             node->children.push_back(childNode);
                             node->childrenInfo.emplace_back(NodeChildType::Node, dcidx);
+                            node->status = ParseNodeStatus::ERROR;
                         }
                     } else {
                         
@@ -263,7 +266,7 @@ namespace ParseTree {
                     if (!gotoNextParsePoint(dcidx, rule)) {
                         // if we are in a required subdefinition, raise an error when parsing fails
                         if (isInRequiredSuccessSubDefinition) {
-                            handleParseError(dc, &tokens[tokenPtr], ParseErrorType::RULE, false, true, dcidx);
+                            handleParseError(dc, &tokens[tokenPtr], ParseErrorType::RULE, rule->AllowRecover(), true, dcidx);
                             return node;
                         }
                             
@@ -359,12 +362,6 @@ namespace ParseTree {
 
             } else if (dc.token != RULECOMPONENT_NO_TOKEN) {
 
-                if (tokens[tokenPtr].type == TokenType::RELATIONAL_OPERATOR) {
-                    int u = 3;
-
-                    std::cout << "Is relational operator" << std::endl;
-                }
-
                 // if there are too few tokens left in the stream
                 if (tokens.size() <= tokenPtr) {
 
@@ -382,7 +379,7 @@ namespace ParseTree {
 
                     if (!gotoNextParsePoint(dcidx, rule)) {
                         if (isInRequiredSuccessSubDefinition) {
-                            handleParseError(dc, &tokens[tokenPtr], ParseErrorType::TOKEN, false, true, dcidx);
+                            handleParseError(dc, &tokens[tokenPtr], ParseErrorType::TOKEN, rule->AllowRecover(), true, dcidx);
                             return node;
                         }
 
@@ -394,7 +391,7 @@ namespace ParseTree {
         }
 
         // if we have used all definition components and parsed nothing, we have failed
-        if (node->tokens.empty() && node->children.empty() && !node->didRecover) {
+        if (node->tokens.empty() && node->children.empty() && !(node->status == ParseNodeStatus::ERROR_RECOVERED)) {
             failed = true;
         }
 

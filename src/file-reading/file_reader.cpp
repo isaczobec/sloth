@@ -95,7 +95,7 @@ namespace FileReader {
         
         std::fread(&fileStreams.back().stream[0], 1, fileSize, file);
 
-        std::cout << "read " << fileStreams.back().stream << " from the file.\n";
+        // std::cout << "read " << fileStreams.back().stream << " from the file.\n";
 
         std::fclose(file);
 

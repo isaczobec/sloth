@@ -7,20 +7,23 @@
 namespace ParseTree {
 
     namespace Rules {
-        Rule STATEMENT_SEQUENCE;
-        Rule STATEMENT;
-        Rule SCOPE;
-        Rule STATEMENT_TERMINATOR;
-        Rule CONTROL_SEQUENCE;        
-        Rule TYPE_IDENTIFIER;
-        Rule FUNCTION_DECLARATION;
-        Rule VARIABLE_DECLARATION;
-        Rule ASSIGNMENT;
-        Rule ENUMERATION_EXPRESSIONS; 
-        Rule ENUMERATION_TYPED_IDENTIFIERS;
-        Rule FUNCITON_CALL;
-        Rule EXPRESSION;
-        Rule TERM;
+        Rule TOP_STATEMENT_SEQUENCE("Top-Level Statements");
+        Rule SCOPE_STATEMENT_SEQUENCE("Scope-Level Statements");
+        Rule STATEMENT("Statement");
+        Rule SCOPE("Scope");
+        Rule STATEMENT_TERMINATOR("Statement Terminator (;)");
+        Rule CONTROL_SEQUENCE("Control Sequence");        
+        Rule TYPE_IDENTIFIER("Type Identifier");
+        Rule FUNCTION_DECLARATION("Function Declaration");
+        Rule VARIABLE_DECLARATION("Variable Declaration");
+        Rule ASSIGNMENT("Assignment Operation");
+        Rule ENUMERATION_EXPRESSIONS("Expressions"); 
+        Rule ENUMERATION_TYPED_IDENTIFIERS("Typed Identifiers");
+        Rule FUNCITON_CALL("Function Call");
+        Rule EXPRESSION("Expression");
+        Rule TERM("Term");
+
+        Rule SCOPE_END("Scope End");
     }
 
     void CreateRules() {
@@ -34,9 +37,11 @@ namespace ParseTree {
         
         */
 
-        STATEMENT_SEQUENCE << &STATEMENT << D_SBST << &STATEMENT_SEQUENCE OR T::END_OF_FILE << D_SBED;
-        STATEMENT << D_SBST << &CONTROL_SEQUENCE OR &VARIABLE_DECLARATION OR &ASSIGNMENT OR &EXPRESSION << D_SBED << &STATEMENT_TERMINATOR << D_OPST << &STATEMENT OR &SCOPE << D_OPED;
-        SCOPE << T::BRACKET_CURLY_LEFT << &STATEMENT_SEQUENCE << T::BRACKET_CURLY_RIGHT;
+        TOP_STATEMENT_SEQUENCE << D_RSUC << D_SBST << &STATEMENT << D_SBST << &TOP_STATEMENT_SEQUENCE OR T::END_OF_FILE << D_SBED << D_SBED;
+        SCOPE_STATEMENT_SEQUENCE << &STATEMENT << D_OPST << &SCOPE_STATEMENT_SEQUENCE << D_OPED;
+
+        STATEMENT << D_SBST << &CONTROL_SEQUENCE OR &VARIABLE_DECLARATION OR &ASSIGNMENT OR &EXPRESSION << D_SBED << &STATEMENT_TERMINATOR;
+        SCOPE << T::BRACKET_CURLY_LEFT << &SCOPE_STATEMENT_SEQUENCE << T::BRACKET_CURLY_RIGHT;
         STATEMENT_TERMINATOR << D_SBST << T::STATEMENT_TERMINATOR << D_SBED;
         
         CONTROL_SEQUENCE << D_SBST << T::KEYWORD_IF OR T::KEYWORD_WHILE << D_SBED << D_RSUC << D_SBST << T::BRACKET_NORMAL_LEFT << &EXPRESSION << T::BRACKET_NORMAL_RIGHT << D_SBED << &SCOPE;
@@ -57,8 +62,12 @@ namespace ParseTree {
 
 
         // add recovery rules
-        STATEMENT_SEQUENCE.AddRecoveryRule(&STATEMENT_TERMINATOR, 99999); // goto the end of the definition
+        STATEMENT.AddRecoveryRule(&STATEMENT_TERMINATOR, 99999); // goto the end of the definition
+        TOP_STATEMENT_SEQUENCE.AddRecoveryRule(&STATEMENT_TERMINATOR, 0); // try to parse the first statement again
+        TOP_STATEMENT_SEQUENCE.throwSyntaxErrors = false;
 
-        
+        SCOPE_END << T::BRACKET_CURLY_LEFT;
+        SCOPE_STATEMENT_SEQUENCE.AddRecoveryRule(&STATEMENT_TERMINATOR, 0);
+        SCOPE_STATEMENT_SEQUENCE.AddRecoveryRule(&SCOPE_END, 99999);
     }
 }
