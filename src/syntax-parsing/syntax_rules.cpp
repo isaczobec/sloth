@@ -17,6 +17,7 @@ namespace ParseTree {
         this->name = name;
         definition.reserve(INITIAL_DEFINITION_COMPONENT_CAPACITY);
         throwSyntaxErrors = true;
+        requireTotalSuccess = false;
     }
 
     bool Rule::AllowRecover() {
@@ -62,7 +63,7 @@ namespace ParseTree {
     }
 
     bool ParseTreeNode::HadError() {
-        return (status == ParseNodeStatus::ERROR || status == ParseNodeStatus::ERROR_RECOVERED);
+        return (status == ParseNodeStatus::ERROR);
     }
 
     ParseTreeBuilder::ParseTreeBuilder() {
@@ -265,9 +266,12 @@ namespace ParseTree {
                     // if we found an OR directive or end of optional subdefinition and do not need to exit
                     if (!gotoNextParsePoint(dcidx, rule)) {
                         // if we are in a required subdefinition, raise an error when parsing fails
-                        if (isInRequiredSuccessSubDefinition) {
-                            handleParseError(dc, &tokens[tokenPtr], ParseErrorType::RULE, rule->AllowRecover(), true, dcidx);
-                            return node;
+                        if (isInRequiredSuccessSubDefinition || rule->requireTotalSuccess) {
+                            if (handleParseError(dc, &tokens[tokenPtr], ParseErrorType::RULE, rule->AllowRecover(), true, dcidx)) {
+                                continue;
+                            } else {
+                                return node;
+                            }
                         }
                             
                         failed = true;
@@ -378,9 +382,12 @@ namespace ParseTree {
                 } else {
 
                     if (!gotoNextParsePoint(dcidx, rule)) {
-                        if (isInRequiredSuccessSubDefinition) {
-                            handleParseError(dc, &tokens[tokenPtr], ParseErrorType::TOKEN, rule->AllowRecover(), true, dcidx);
-                            return node;
+                        if (isInRequiredSuccessSubDefinition || rule->requireTotalSuccess) {
+                            if (handleParseError(dc, &tokens[tokenPtr], ParseErrorType::RULE, rule->AllowRecover(), true, dcidx)) {
+                                continue;
+                            } else {
+                                return node;
+                            }
                         }
 
                         failed = true;

@@ -65,6 +65,7 @@ namespace ParseTree {
         std::vector<std::pair<Rule*, size_t>> recoveryRules;
 
         bool throwSyntaxErrors;
+        bool requireTotalSuccess; // require that the entire rule has to be parsed correctly upon entering into it
         
         Rule(std::string name);
         

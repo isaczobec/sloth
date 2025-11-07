@@ -37,7 +37,7 @@ namespace ParseTree {
         
         */
 
-        TOP_STATEMENT_SEQUENCE << D_RSUC << D_SBST << &STATEMENT << D_SBST << &TOP_STATEMENT_SEQUENCE OR T::END_OF_FILE << D_SBED << D_SBED;
+        TOP_STATEMENT_SEQUENCE << &STATEMENT << D_SBST << T::END_OF_FILE OR &TOP_STATEMENT_SEQUENCE << D_SBED;
         SCOPE_STATEMENT_SEQUENCE << &STATEMENT << D_OPST << &SCOPE_STATEMENT_SEQUENCE << D_OPED;
 
         STATEMENT << D_SBST << &CONTROL_SEQUENCE OR &VARIABLE_DECLARATION OR &ASSIGNMENT OR &EXPRESSION << D_SBED << &STATEMENT_TERMINATOR;
@@ -65,6 +65,7 @@ namespace ParseTree {
         STATEMENT.AddRecoveryRule(&STATEMENT_TERMINATOR, 99999); // goto the end of the definition
         TOP_STATEMENT_SEQUENCE.AddRecoveryRule(&STATEMENT_TERMINATOR, 0); // try to parse the first statement again
         TOP_STATEMENT_SEQUENCE.throwSyntaxErrors = false;
+        TOP_STATEMENT_SEQUENCE.requireTotalSuccess = true;
 
         SCOPE_END << T::BRACKET_CURLY_LEFT;
         SCOPE_STATEMENT_SEQUENCE.AddRecoveryRule(&STATEMENT_TERMINATOR, 0);
