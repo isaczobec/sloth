@@ -4,7 +4,7 @@ using namespace CodeGeneration;
 
 PfStack::PIteratorPair PfStack::GetHandlers() {
     if (startIndicies.empty()) {
-        return {pfs.begin(), pfs.begin()};
+        return {pfs.begin(), pfs.end()};
     }
     size_t startIndex = startIndicies.back();
     return {pfs.begin() + startIndex, pfs.end()};
@@ -13,8 +13,15 @@ PfStack::PIteratorPair PfStack::GetHandlers() {
 void PfStack::Pop() {
     pfs.pop_back();
 }
+
 void PfStack::Push(NodeHandler&& handler, bool overridePrev) {
     pfs.push_back(std::move(handler));
+
+    // if overriding, add a start index to the stack pointing at the 
+    // recently added function
+    if (overridePrev) {
+        startIndicies.push_back(pfs.size() - 1);
+    }  
 }
 
 void TreeTraverser::TraverseNode(ParseTreeNode& node, ControlFlowHandler& cf) {
@@ -50,6 +57,9 @@ void TreeTraverser::TraverseNode(ParseTreeNode& node, ControlFlowHandler& cf) {
     }
 }
 
-void TreeTraverser::AddHandler(Rule* rule, NodeHandler pf, bool overridePrev = true) {
-
+void TreeTraverser::AddHandler(Rule* rule, NodeHandler pf, bool overridePrev = false) {
+ 
+    // record that a handler has been added by this node
+    rulesAddedFlags->push_back(rule);
+    pfMap[rule].Push(std::move(pf), overridePrev);
 }
