@@ -60,6 +60,7 @@ namespace ParseTree {
         VARIABLE_DECLARATION << &TYPE_IDENTIFIER << D_SBST << &ASSIGNMENT OR T::IDENTIFIER << D_SBED; 
         ASSIGNMENT << T::IDENTIFIER << T::ASSIGNMENT_OPERATOR << &EXPRESSION;
 
+        SCOPE_END << T::BRACKET_CURLY_RIGHT;
 
         // add recovery rules
         STATEMENT.AddRecoveryRule(&STATEMENT_TERMINATOR, 99999); // goto the end of the definition
@@ -67,7 +68,6 @@ namespace ParseTree {
         TOP_STATEMENT_SEQUENCE.throwSyntaxErrors = false;
         TOP_STATEMENT_SEQUENCE.requireTotalSuccess = true;
 
-        SCOPE_END << T::BRACKET_CURLY_LEFT;
         SCOPE_STATEMENT_SEQUENCE.AddRecoveryRule(&STATEMENT_TERMINATOR, 0);
         SCOPE_STATEMENT_SEQUENCE.AddRecoveryRule(&SCOPE_END, 99999);
     }

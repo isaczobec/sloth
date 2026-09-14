@@ -1,0 +1,208 @@
+
+
+
+
+int a := 4; // value is fixed at 4
+
+int b; // value is 'indeterminate'
+
+(int, float) -> float f1(u, v) := u + v // function type
+
+float f1_2(int u, float v) := u + v; // also allowed; equivalent
+
+(int u, float v) -> float f1_3 := u + v; // also allowed; equivalent
+
+
+
+(float, float) -> float f3; // can also declare and later do pattern matching (which reads left->right)
+f3(5, 4) := 8;
+f3(u, v) := 
+    u == v ?    2.0 | 
+    u == v+1 ?  3.0 ;
+f(u, v) := u / v; // if no other pattern matched
+
+// we can open a new scope to perform instructions sequentially
+float f3(float a, float b, float c) := { 
+    float d = a + b;
+    d = d + 1; // not immutable by default
+
+    d = f3(c, d);
+    return c;
+}
+
+// functions with side effects, or that depend on 
+// state outside of the parameter list must be marked 
+// impure. these cannot be used in expressions.
+impure float y(float x) := {
+    float c = 7 + a;
+    a = 1; // refers to a at top of file
+    return c;
+}
+
+(int, float) -> int f2(u, v) := {
+    int x := u + v;
+    return v;
+}
+
+int c := a + b; // will have indeterminate value since b is indeterminate
+c << b = 1; // substitute b=1 into c, making it determinate. the value of b value is not changed by this. This changes the value of c.
+
+/*
+    c
+    |
+    +
+   / \
+   a b
+   |
+   4
+     
+    c    Could be instantly evaluated to 5. 
+    |
+    +
+   / \
+   a 1
+   |
+   4
+     
+    c    c substituted with a. Total substitution does not point c to a but rather points/copies all the children of a to c. 
+    |
+    1
+
+*/
+
+
+(int a, int b) -> (int c, int d) tup := (d, c); // tuples are defined at the language level
+
+(int a, int b) -> (int c, int d) -> (int e) func := {...} // -> is right associative; this function returns  (int c, int d) -> (int e)
+
+// infix can be defined as this
+// all subsequent usages of the funciton must follow the same parameter order
+(int, int) -> int +++;
+a +++ 0 := a;
+0 +++ a := a;
+a +++ b := (a + 1) +++ (b-1);
+
+// prefix and suffix for single variable functions should be allowed as well.
+
+// a class gets its own scope.
+// a class can have member functions.
+class Example := {
+    int a;
+    private int b; // members can be marked private, but are public by default
+
+    impure int f1(int c) {
+        a = c+1;
+    }
+}
+
+// classes can be constructed like this.
+// the variables within Example that have not had a := are all treated as 
+// indeterminate. Multiple instructions/logic can happen inside the scope.
+// we use '=' instead of ':=' to denote that the value stored in this variable 
+// can be interpreted as being changed. 
+// we could also have declared default with := and overwritten them wiht '='.
+Example e := (Example) {a = 1;};
+
+// access members with '.'
+int exampleFunc(Example i) := {
+    return i.a;
+}
+
+// A class can be an algebraic datatype. 
+class ADTExample := 
+First {
+    int b;
+    int c;
+} |
+Second {
+    int e;
+}
+
+(ADTExample) -> int g; 
+g(First a) := {
+    // some operations; assumes a is First
+    return a.b;
+};
+
+g(Second a) := {
+    // some operations; assumes a is First
+    return a.e;
+};
+
+// interfaces support having both member variables and functions
+// funcitons must be pure if not stated impure. If stated impure in the interface,
+// it is still ok if the implementing class does not state impure.
+// for ADT classes, all subtypes must inlcude definitions
+interface ExampleInterface := {
+    int i;
+    (void) -> int getNumber;
+}
+
+// generic classes, methods and interfaces are allowed. 
+// generic types are included in <...> before anything else.
+<T> class GenericExample {
+    T a;
+}
+
+<T> T genericFunction(T t) := t;
+
+<T1, T2> genericInterface := {
+    //...
+}
+
+// generics can be forced to implement interfaces
+<T : ExampleInterface> (T) -> int someFunction(t) := t.getNumber();
+
+
+// -----------------------------------------
+// ---- Example implementation of a BST ----
+// -----------------------------------------
+
+<T> interface Comparable := {
+    bool greaterThan(T other);
+}
+
+<T> interface Equatable := {
+    bool greaterThan(T other);
+}
+
+<T : Comparable<T>, Equatable<T>> class BinaryTree := 
+Node {
+    BinaryTree left = (Nothing) {}; // classes can be recursive
+    BinaryTree right = (Nothing) {};
+    T value;
+} |
+Nothing {
+
+}
+
+// everyything is passed by value unless & succeeds a type
+// a function not marked impure cannot take by reference
+
+// defining a variable to be the same as some 
+// other variable will initially cause the second
+// variable to point at the first variable in memory.
+// making mutations to the variable, if that variable
+// is not marked as a reference will create a copy.
+// thus, since next is not touched before it is bound
+// to a reference in the next recursive insert call
+// is fine. 
+
+// Perhaps there should be an operator forcing a variable
+// to be copied/passed by value?
+
+impure (BinaryTree&, T) -> BinaryTree& insert;
+insert(Node n, t) := {
+
+    BinaryTree& next := 
+        t.greaterThan(n.value) ? n.right |
+        true ? n.left;
+
+    // writing a subtype of an ADT and then a variable name both checks a truth value
+    // and binds that the variable is of that subtype in the opened scope
+    if (Node next) { 
+        return insert(next, t);
+    } else if (Nothing next) {
+        next = (BinaryTree Node) { value = t; };
+    }
+}

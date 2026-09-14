@@ -68,7 +68,6 @@ namespace ParseTree {
 
     ParseTreeBuilder::ParseTreeBuilder() {
         CreateRules();
-
     }
 
     ParseTreeBuilder::~ParseTreeBuilder() {}
@@ -134,16 +133,21 @@ namespace ParseTree {
                 }
 
                 // remove any subdefinitions we pass
-                if ((*rule).definition[dcidx].directive == D_SBED && scopeLevel <= scopeLevelInitial) {
+                // (the `!subDefinitionReturnStack.empty()` checks guard against a stale
+                // `scopeLevel` match: once our own subdefinition's real stack entry has
+                // been consumed, any later D_SBST/D_OPST we scan past is an unrelated
+                // sibling construct that was never actually entered, so its matching
+                // D_SBED/D_OPED/D_OR must not be treated as a real return point)
+                if ((*rule).definition[dcidx].directive == D_SBED && scopeLevel <= scopeLevelInitial && !subDefinitionReturnStack.empty()) {
                     scopeLevel--;
                     tokenPtr = subDefinitionReturnStack.back();
-                    if (!subDefinitionReturnStack.empty()) subDefinitionReturnStack.pop_back();
+                    subDefinitionReturnStack.pop_back();
                     if (!subDefIsOptionalStack.empty()) subDefIsOptionalStack.pop_back();
                     popChildren();
-                    
-                } else if ((*rule).definition[dcidx].directive == D_OPED && scopeLevel <= scopeLevelInitial) {
+
+                } else if ((*rule).definition[dcidx].directive == D_OPED && scopeLevel <= scopeLevelInitial && !subDefinitionReturnStack.empty()) {
                     tokenPtr = subDefinitionReturnStack.back();
-                    if (!subDefinitionReturnStack.empty()) subDefinitionReturnStack.pop_back();
+                    subDefinitionReturnStack.pop_back();
                     if (!subDefIsOptionalStack.empty()) subDefIsOptionalStack.pop_back();
                     popChildren();
                     if (scopeLevel <= scopeLevelInitial) {
@@ -151,8 +155,8 @@ namespace ParseTree {
                     } else {
                         scopeLevel--;
                     }
-                    
-                } else if ((*rule).definition[dcidx].directive == D_OR && scopeLevel <= scopeLevelInitial) {
+
+                } else if ((*rule).definition[dcidx].directive == D_OR && scopeLevel <= scopeLevelInitial && !subDefinitionReturnStack.empty()) {
                     if (scopeLevel == scopeLevelInitial) {
                         tokenPtr = subDefinitionReturnStack.back();
                         popChildren(false, true); // only delete children, do not pop stacks
