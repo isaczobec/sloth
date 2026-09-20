@@ -153,6 +153,9 @@ interface ExampleInterface := {
 // generics can be forced to implement interfaces
 <T : ExampleInterface> (T) -> int someFunction(t) := t.getNumber();
 
+// we can optionally specify which Type to use for a generic function/class
+// can be useful for if type inference does not work
+SomeType result := genericFunction<SomeType>(val); // val is SomeType
 
 // -----------------------------------------
 // ---- Example implementation of a BST ----
@@ -166,7 +169,7 @@ interface ExampleInterface := {
     bool greaterThan(T other);
 }
 
-<T : Comparable<T>, Equatable<T>> class BinaryTree := 
+<T : [Comparable<T>, Equatable<T>]> class BinaryTree := 
 Node {
     BinaryTree left = (Nothing) {}; // classes can be recursive
     BinaryTree right = (Nothing) {};
@@ -176,20 +179,7 @@ Nothing {
 
 }
 
-// everyything is passed by value unless & succeeds a type
-// a function not marked impure cannot take by reference
 
-// defining a variable to be the same as some 
-// other variable will initially cause the second
-// variable to point at the first variable in memory.
-// making mutations to the variable, if that variable
-// is not marked as a reference will create a copy.
-// thus, since next is not touched before it is bound
-// to a reference in the next recursive insert call
-// is fine. 
-
-// Perhaps there should be an operator forcing a variable
-// to be copied/passed by value?
 
 impure (BinaryTree&, T) -> BinaryTree& insert;
 insert(Node n, t) := {
