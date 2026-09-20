@@ -85,14 +85,20 @@ namespace ParseTree {
         int initialTokenPtr = tokenPtr;
         std::vector<size_t> subDefinitionReturnStack;
         std::vector<bool> subDefIsOptionalStack; // if the subdefinitions in `subDefinitionReturnStack` are optional
-        std::vector<size_t> subDefTokenStartStack; // A stack keeping track of where subdefinition tokens start, so they can be popped if parsing a subdefinition fails
-        std::vector<size_t> subDefChildStartStack; // A stack keeping track of where subdefinition children start, so they can be popped if parsing a subdefinition fails
+        /* A stack keeping track of how much of `node->childrenInfo` had been filled in when
+           each subdefinition was entered, so that everything parsed inside a subdefinition
+           can be discarded if that subdefinition turns out not to match.
+
+           This indexes `childrenInfo` rather than `children` or `tokens` on purpose:
+           `childrenInfo` is the only list that records both kinds of child in parse order,
+           and unwinding it is what tells us which of the other two lists to pop from. */
+        std::vector<size_t> subDefChildStartStack;
 
         bool isInRequiredSuccessSubDefinition = false;
         size_t requiredSuccesStartLevel = 0; // which subdefinition level the required success began at
 
-        const auto popChildren = [&subDefTokenStartStack, &subDefChildStartStack, node](bool popStacks = true, bool deletechildren = true) {
-            if (subDefTokenStartStack.empty() || subDefChildStartStack.empty()) return;
+        const auto popChildren = [&subDefChildStartStack, node](bool popStacks = true, bool deletechildren = true) {
+            if (subDefChildStartStack.empty()) return;
 
             if (deletechildren) {
                 while (node->childrenInfo.size() > subDefChildStartStack.back()) {
@@ -107,8 +113,7 @@ namespace ParseTree {
             }
 
             if (popStacks) {
-                if (!subDefChildStartStack.empty()) subDefChildStartStack.pop_back();
-                if (!subDefTokenStartStack.empty()) subDefTokenStartStack.pop_back();
+                subDefChildStartStack.pop_back();
             }
         };
 
@@ -118,49 +123,58 @@ namespace ParseTree {
         at a D_OPED or D_OR directive if one was found, and in that case
         return true, otherwise return false.
         */  
-        const auto gotoNextParsePoint = [&subDefIsOptionalStack, &subDefinitionReturnStack, &popChildren, &tokenPtr](int& dcidx, Rule* rule) {
-            // look forward and try to find an `OR` directive or optional subsdefinition ender.
+        const auto gotoNextParsePoint = [&](int& dcidx, Rule* rule) {
+            /*
+            Scan forward from a failed component for a point where parsing can resume:
+            either an alternative separator, or the end of an optional group, belonging
+            to a subdefinition that we are actually inside of. Sets `dcidx` to that
+            directive and returns true, or returns false if there is no such point.
 
-            // we must find an OPED or OR on the same or lower level to be able to exit to it
-            int scopeLevelInitial = subDefinitionReturnStack.size() - 1;
-            int scopeLevel = scopeLevelInitial;
+            `depth` counts how many nested groups we have scanned *past* without ever
+            having entered them. Only a directive at depth 0 belongs to the group that is
+            live at the top of `subDefinitionReturnStack`, and only such a directive is a
+            real resume point. Without this counter, the terminator of an unrelated
+            sibling group further along the definition gets mistaken for our own.
+            */
+            int depth = 0;
 
-            for (int i = dcidx + 1; i < (*rule).definition.size(); ++i) {
+            for (int i = dcidx + 1; i < (int)(*rule).definition.size(); ++i) {
                 dcidx = i;
+                const DefinitionDirective directive = (*rule).definition[dcidx].directive;
 
-                if ((*rule).definition[dcidx].directive == D_SBST || (*rule).definition[dcidx].directive == D_OPST) {
-                    scopeLevel++;
+                if (directive == D_SBST || directive == D_OPST) {
+                    depth++;
                 }
 
-                // remove any subdefinitions we pass
-                // (the `!subDefinitionReturnStack.empty()` checks guard against a stale
-                // `scopeLevel` match: once our own subdefinition's real stack entry has
-                // been consumed, any later D_SBST/D_OPST we scan past is an unrelated
-                // sibling construct that was never actually entered, so its matching
-                // D_SBED/D_OPED/D_OR must not be treated as a real return point)
-                if ((*rule).definition[dcidx].directive == D_SBED && scopeLevel <= scopeLevelInitial && !subDefinitionReturnStack.empty()) {
-                    scopeLevel--;
+                else if (directive == D_SBED || directive == D_OPED) {
+
+                    // a nested group that was scanned past rather than entered
+                    if (depth > 0) {
+                        depth--;
+                        continue;
+                    }
+
+                    // this terminates the group we are currently inside of, so rewind
+                    // everything that group had consumed
+                    if (subDefinitionReturnStack.empty()) return false;
                     tokenPtr = subDefinitionReturnStack.back();
                     subDefinitionReturnStack.pop_back();
                     if (!subDefIsOptionalStack.empty()) subDefIsOptionalStack.pop_back();
                     popChildren();
 
-                } else if ((*rule).definition[dcidx].directive == D_OPED && scopeLevel <= scopeLevelInitial && !subDefinitionReturnStack.empty()) {
-                    tokenPtr = subDefinitionReturnStack.back();
-                    subDefinitionReturnStack.pop_back();
-                    if (!subDefIsOptionalStack.empty()) subDefIsOptionalStack.pop_back();
-                    popChildren();
-                    if (scopeLevel <= scopeLevelInitial) {
-                        return true;
-                    } else {
-                        scopeLevel--;
-                    }
+                    // leaving an optional group out entirely is a valid parse, so we are
+                    // done. a required group gives us nothing, so keep looking for a
+                    // resume point in the group that encloses it.
+                    if (directive == D_OPED) return true;
+                }
 
-                } else if ((*rule).definition[dcidx].directive == D_OR && scopeLevel <= scopeLevelInitial && !subDefinitionReturnStack.empty()) {
-                    if (scopeLevel == scopeLevelInitial) {
-                        tokenPtr = subDefinitionReturnStack.back();
-                        popChildren(false, true); // only delete children, do not pop stacks
-                    }
+                else if (directive == D_OR && depth == 0) {
+                    if (subDefinitionReturnStack.empty()) return false;
+
+                    // rewind to the start of the group and try the next alternative.
+                    // the group itself stays open, so its stack entries are left alone.
+                    tokenPtr = subDefinitionReturnStack.back();
+                    popChildren(false, true);
                     return true;
                 }
             }
@@ -169,6 +183,16 @@ namespace ParseTree {
 
         bool failed = false; 
 
+        /* The token an error message should point at. Error recovery can walk the token
+           pointer all the way to the end of the stream, so this clamps to the last token
+           (which is always the end of file token) instead of reading out of range. */
+        const auto errorToken = [&tokens, &tokenPtr]() -> Token* {
+            if (tokens.empty()) return nullptr;
+            if (tokenPtr >= (int)tokens.size()) return &tokens.back();
+            if (tokenPtr < 0) return &tokens.front();
+            return &tokens[tokenPtr];
+        };
+
         const auto handleParseError = [&] (
             DefinitionComponent& dc, Token* currentToken, ParseErrorType errorType,
             bool recover = false, bool raiseError = false, int& dcidx
@@ -176,7 +200,7 @@ namespace ParseTree {
 
             // construct error message string
 
-            if (raiseError && rule->throwSyntaxErrors) {
+            if (raiseError && rule->throwSyntaxErrors && currentToken != nullptr) {
                 std::string errorMessage;
                 if (errorType == ParseErrorType::TOKEN) {
                     errorMessage += "Expected '";
@@ -249,7 +273,7 @@ namespace ParseTree {
                     if (childNode->HadError())  {
                         node->error = childNode->error;
                         if (rule->AllowRecover()) {
-                            handleParseError(dc, &tokens[tokenPtr], ParseErrorType::RULE, true, false, dcidx);
+                            handleParseError(dc, errorToken(), ParseErrorType::RULE, true, false, dcidx);
                         } else {
                             childNode->parent = node;
                             node->children.push_back(childNode);
@@ -271,7 +295,7 @@ namespace ParseTree {
                     if (!gotoNextParsePoint(dcidx, rule)) {
                         // if we are in a required subdefinition, raise an error when parsing fails
                         if (isInRequiredSuccessSubDefinition || rule->requireTotalSuccess) {
-                            if (handleParseError(dc, &tokens[tokenPtr], ParseErrorType::RULE, rule->AllowRecover(), true, dcidx)) {
+                            if (handleParseError(dc, errorToken(), ParseErrorType::RULE, rule->AllowRecover(), true, dcidx)) {
                                 continue;
                             } else {
                                 return node;
@@ -292,8 +316,7 @@ namespace ParseTree {
 
                     subDefinitionReturnStack.push_back(tokenPtr);
                     subDefIsOptionalStack.push_back(false);
-                    subDefChildStartStack.push_back(node->children.size());
-                    subDefTokenStartStack.push_back(node->tokens.size());
+                    subDefChildStartStack.push_back(node->childrenInfo.size());
 
                     continue;
                 }
@@ -303,8 +326,6 @@ namespace ParseTree {
                 else if (dc.directive == D_SBED) {
                     if (!subDefinitionReturnStack.empty()) subDefinitionReturnStack.pop_back();
                     if (!subDefIsOptionalStack.empty()) subDefIsOptionalStack.pop_back(); // TODO: check if it is not optional, otherwise rules are wrongly defined
-                    if (!subDefChildStartStack.empty()) subDefChildStartStack.pop_back(); 
-                    if (!subDefTokenStartStack.empty()) subDefTokenStartStack.pop_back();
                     popChildren(true, false);
                     
                     // Reset required success flag when we successfully exit the required subdefinition
@@ -320,15 +341,12 @@ namespace ParseTree {
                     // record current positions as the start of the optional group
                     subDefinitionReturnStack.push_back(tokenPtr);
                     subDefIsOptionalStack.push_back(true);
-                    subDefChildStartStack.push_back(node->children.size());
-                    subDefTokenStartStack.push_back(node->tokens.size());
+                    subDefChildStartStack.push_back(node->childrenInfo.size());
                     continue;
                 }
                 else if (dc.directive == D_OPED) {
                     if (!subDefinitionReturnStack.empty()) subDefinitionReturnStack.pop_back();
                     if (!subDefIsOptionalStack.empty()) subDefIsOptionalStack.pop_back(); // TODO: check if it is not optional, otherwise rules are wrongly defined
-                    if (!subDefChildStartStack.empty()) subDefChildStartStack.pop_back(); 
-                    if (!subDefTokenStartStack.empty()) subDefTokenStartStack.pop_back();
                     popChildren(true, false);
                     continue;
                 }
@@ -350,7 +368,19 @@ namespace ParseTree {
                         if (!subDefIsOptionalStack.empty()) subDefIsOptionalStack.pop_back();
                         popChildren(true, false);
 
-                        while ((*rule).definition[dcidx].directive != D_SBED && (*rule).definition[dcidx].directive != D_OPED) {
+                        /* Skip the alternatives we no longer need to try. Nested groups
+                           have to be counted, otherwise a nested group's terminator inside
+                           a later alternative is mistaken for the end of this one. */
+                        int nesting = 0;
+                        while (true) {
+                            const DefinitionDirective d = (*rule).definition[dcidx].directive;
+                            if (d == D_SBST || d == D_OPST) {
+                                nesting++;
+                            } else if (d == D_SBED || d == D_OPED) {
+                                if (nesting == 0) break;
+                                nesting--;
+                            }
+
                             dcidx++;
 
                             // if we do not find a substring ender, throw an error
@@ -373,8 +403,10 @@ namespace ParseTree {
                 // if there are too few tokens left in the stream
                 if (tokens.size() <= tokenPtr) {
 
-                    // if we are inside an optional inclusion, it is fine that there are no more tokens left
-                    if (!(!subDefinitionReturnStack.empty() && subDefIsOptionalStack[0])) {
+                    // if we are inside an optional inclusion, it is fine that there are no more tokens left.
+                    // the innermost group is the one we are currently in, so check the back of the
+                    // stack rather than the front.
+                    if (!(!subDefIsOptionalStack.empty() && subDefIsOptionalStack.back())) {
                         failed = true;
                         break;
                     }
@@ -387,7 +419,7 @@ namespace ParseTree {
 
                     if (!gotoNextParsePoint(dcidx, rule)) {
                         if (isInRequiredSuccessSubDefinition || rule->requireTotalSuccess) {
-                            if (handleParseError(dc, &tokens[tokenPtr], ParseErrorType::RULE, rule->AllowRecover(), true, dcidx)) {
+                            if (handleParseError(dc, errorToken(), ParseErrorType::RULE, rule->AllowRecover(), true, dcidx)) {
                                 continue;
                             } else {
                                 return node;
@@ -407,9 +439,14 @@ namespace ParseTree {
         }
 
         if (failed) {
+            // rewind the token pointer before giving up, so that the caller can cleanly
+            // try its next alternative. this has to happen *before* the return, and
+            // `tokenPtr` is a reference into the caller's state, so leaving it advanced
+            // would make every alternative after a partially matched one start in the
+            // wrong place.
+            tokenPtr = initialTokenPtr;
             delete node;
             return NULL;
-            tokenPtr = initialTokenPtr; // reset tokenPtr
         }
 
         return node;

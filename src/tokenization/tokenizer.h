@@ -20,25 +20,49 @@ namespace Tokenization {
 
         END_OF_FILE, // token that signifies the end of file being reached
 
+        /* Matched by the tokenizer but never emitted into the token stream. */
+        COMMENT,
+
         BRACKET_CURLY_LEFT,
         BRACKET_CURLY_RIGHT,
         BRACKET_NORMAL_LEFT,
         BRACKET_NORMAL_RIGHT,
-        
+        /* '<' and '>'. These serve double duty as the generic argument brackets and as
+           the less-than/greater-than relational operators. The two roles are not
+           distinguishable by the tokenizer, so the parser separates them by backtracking. */
+        BRACKET_ANGLE_LEFT,
+        BRACKET_ANGLE_RIGHT,
+
         IDENTIFIER,
-        
-        ASSIGNMENT_OPERATOR,
-        RELATIONAL_OPERATOR,
-        BINARY_OPERATOR,
+
+        ASSIGNMENT_OPERATOR,      // '='  : (re)assign the value stored in a variable
+        DEFINITION_OPERATOR,      // ':=' : bind a name to a fixed/immutable definition
+        SUBSTITUTION_OPERATOR,    // '<<' : substitute into the expression tree of an indeterminate value
+        REFERENCE_OPERATOR,       // '&'  : marks a type as a reference
+        ARROW,                    // '->' : function type constructor, right associative
+        MEMBER_ACCESS,            // '.'
+        GUARD_OPERATOR,           // '?'  : separates a pattern matching guard from its result
+        ALTERNATIVE_SEPARATOR,    // '|'  : separates ADT variants and pattern matching alternatives
+        TYPE_CONSTRAINT,          // ':'  : constrains a generic parameter to an interface
+
+        RELATIONAL_OPERATOR,      // '==', '!=', '>=', '<='. Note that '<' and '>' are angle brackets.
+        BINARY_OPERATOR,          // '+', '-', '*', '/', '%' and any user defined combination of them
 
         STATEMENT_TERMINATOR,
-        
+
         LITERAL_INTEGER,
         LITERAL_FLOAT,
+        LITERAL_BOOL,
 
         KEYWORD_IF,
         KEYWORD_ELSE,
         KEYWORD_WHILE,
+        KEYWORD_RETURN,
+        KEYWORD_CLASS,
+        KEYWORD_INTERFACE,
+        KEYWORD_IMPURE,
+        KEYWORD_PRIVATE,
+        KEYWORD_VOID,
 
         ELEMENT_SEPARATOR
     };

@@ -65,6 +65,9 @@ namespace ControlFlow {
         /* When traversing the step stack down, this vector stores the indexes of the parents.*/
         std::vector<int> parentIndexStepStack;
         int currentStepIndex = 0;
+        /* Total number of errors reported through `Error()`, including ones the parser
+           managed to recover from. Errors live in a tree of steps, so this saves walking it. */
+        int errorCount = 0;
 
         public:
         ControlFlowHandler();
@@ -74,6 +77,7 @@ namespace ControlFlow {
         void NewStep(bool down = false);
         void CompleteStep(int statusCode = STATUSCODE_SUCCESS_CONTINUE, bool up = false);  // TODO: replace up down next with enums
 
+        int ErrorCount() const;
         void Compile(const char* filename);
     };
 }

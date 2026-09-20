@@ -37,7 +37,7 @@ namespace ParseTree {
     inline constexpr DefinitionDirective RULECOMPONENT_NO_DIRECTIVE = DefinitionDirective::NONE;
 
     /* The total amount of rules that exist*/
-    inline constexpr int RULE_AMOUNT = 32;
+    inline constexpr int RULE_AMOUNT = 44;
     
     /* The amount of `DefinitionComponent`s a definition by default gets allocated space for. */
     inline constexpr int INITIAL_DEFINITION_COMPONENT_CAPACITY = 32;
@@ -127,25 +127,69 @@ namespace ParseTree {
 
     namespace Rules {
 
+        // ---- program structure ----
         extern Rule TOP_STATEMENT_SEQUENCE;
+        extern Rule TOP_STATEMENT;
         extern Rule SCOPE_STATEMENT_SEQUENCE;
         extern Rule STATEMENT;
         extern Rule SCOPE;
         extern Rule STATEMENT_TERMINATOR;
+        extern Rule SCOPE_END;
 
+        // ---- control flow ----
         extern Rule CONTROL_SEQUENCE;
-        
-        extern Rule TYPE_IDENTIFIER;
-        extern Rule FUNCTION_DECLARATION;
-        extern Rule VARIABLE_DECLARATION;
-        extern Rule ASSIGNMENT;
-        
-        extern Rule ENUMERATION_EXPRESSIONS; // an enumeration of elements/expressions, e.g. "potato, 2, matrix, matmul(potato, matrix)". used e.g. for calling functions.
-        extern Rule ENUMERATION_TYPED_IDENTIFIERS; // an enumeration of typed identifiers, e.g. "Matrix a, Scalar b"
+        extern Rule CONDITION;   // either an expression or an ADT subtype test, e.g. "Node next"
+        extern Rule ELSE_CLAUSE;
+        extern Rule RETURN_STATEMENT;
 
-        extern Rule FUNCITON_CALL;
+        // ---- types ----
+        extern Rule TYPE;                 // TYPE_CORE with an optional trailing '&'
+        extern Rule TYPE_CORE;            // function type, tuple type, void, or a named type
+        extern Rule NAMED_TYPE;           // an identifier with optional generic arguments
+        extern Rule GENERIC_ARGUMENTS;    // "<int, float>"
+        extern Rule TYPE_ENUMERATION;     // "int, float"
+        extern Rule PARAMETER;            // a type with an optional name, e.g. "int" or "int a"
+        extern Rule PARAMETER_ENUMERATION;
+        extern Rule GENERIC_PARAMETERS;             // "<T : Comparable<T>, Equatable<T>>"
+        extern Rule GENERIC_PARAMETER;
+        extern Rule GENERIC_PARAMETER_ENUMERATION;
+
+        // ---- declarations ----
+        extern Rule DECLARATION;          // "[generics] [impure] TYPE name [(params)] tail"
+        extern Rule DECLARATION_NAME;     // an identifier or a user defined operator symbol
+        extern Rule DECLARATION_TAIL;     // ":= body", "= body", a bare scope, or just ';'
+        extern Rule CLASS_DECLARATION;
+        extern Rule INTERFACE_DECLARATION;
+        extern Rule CLASS_BODY;           // either a member block or a list of ADT variants
+        extern Rule ADT_VARIANT;
+        extern Rule ADT_VARIANT_ENUMERATION;
+        extern Rule MEMBER_BLOCK;
+        extern Rule MEMBER_SEQUENCE;
+        extern Rule MEMBER;
+
+        // ---- definition clauses (pattern matching) ----
+        extern Rule FUNCTION_CLAUSE;      // "f3(5, 4) := 8;"
+        extern Rule INFIX_CLAUSE;         // "a +++ 0 := a;"
+        extern Rule PATTERN;
+        extern Rule PATTERN_ENUMERATION;
+        extern Rule DEFINITION_BODY;      // a scope, a guarded expression, or a plain expression
+        extern Rule GUARDED_EXPRESSION;   // "u == v ? 2.0 | u == v+1 ? 3.0"
+        extern Rule GUARD_CLAUSE;
+
+        // ---- statements ----
+        extern Rule ASSIGNMENT;
+        extern Rule SUBSTITUTION;         // "c << b = 1;"
+        extern Rule DESIGNATOR;           // an assignable target, e.g. "n.right"
+
+        // ---- expressions ----
         extern Rule EXPRESSION;
+        extern Rule OPERATOR;             // any infix operator, including '<' and '>'
         extern Rule TERM;
+        extern Rule PRIMARY;
+        extern Rule POSTFIX;              // ".member", "(args)" or "<T>(args)"
+        extern Rule POSTFIX_CHAIN;
+        extern Rule ENUMERATION_EXPRESSIONS;
+        extern Rule CONSTRUCTION_LITERAL; // "(Example) {a = 1;}"
 
     }
 

@@ -31,6 +31,7 @@ namespace ControlFlow {
 
     CompilationError* ControlFlowHandler::Error(CompilationErrorSeverity severity, unsigned int errorCode, std::string errorMessage, const FileReader::SourceString& sourceString) {
         compilationSteps.back().errors.emplace_back(severity, errorCode, errorMessage, sourceString);
+        if (severity == CompilationErrorSeverity::ERROR) {errorCount += 1;}
 
         // construct an error string
         std::string errorString;
@@ -97,6 +98,10 @@ namespace ControlFlow {
         }
     }
 
+    int ControlFlowHandler::ErrorCount() const {
+        return errorCount;
+    }
+
     void ControlFlowHandler::Compile(const char* filename) {
         using namespace ParseTree;
 
@@ -114,7 +119,23 @@ namespace ControlFlow {
         int tokenPtr = 0;
         ParseTreeNode* node = builder.ParseNode(&Rules::TOP_STATEMENT_SEQUENCE, t.GetTokens(), tokenPtr, *this);
 
-        std::cout << "done" << std::endl;
+        // report the outcome of parsing. a node that stops short of the end of file
+        // token means the parser gave up part way through without being able to recover.
+        std::vector<Token>& parsedTokens = t.GetTokens();
+        if (node == NULL) {
+            std::cout << "parsing failed: the token stream did not match the syntax." << std::endl;
+        } else if (tokenPtr < (int)parsedTokens.size() - 1) {
+            std::cout << "parsing stopped at line "
+                      << parsedTokens[tokenPtr].sourceString.lineNumber
+                      << " (token " << tokenPtr << " of " << parsedTokens.size() - 1 << ")."
+                      << std::endl;
+        } else if (ErrorCount() > 0) {
+            std::cout << "reached the end of the file, with " << ErrorCount() << " error(s)." << std::endl;
+        } else {
+            std::cout << "parsed the whole file succesfully." << std::endl;
+        }
+
+        delete node;
 
     }
 }

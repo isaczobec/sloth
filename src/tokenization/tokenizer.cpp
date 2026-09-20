@@ -66,6 +66,18 @@ void Tokenizer::Tokenize(FileReader::FileStream* fileStream, ControlFlow::Contro
 
             if (foundMatch && tokenMatch.position() == 0) 
             {
+                // comments are matched like any other token, but are never emitted into
+                // the stream. we still have to walk them character by character so that
+                // the line counter stays correct across multi line block comments.
+                if (tokenRegexPair.first == TokenType::COMMENT) {
+                    for (size_t i = 0; i < (size_t)tokenMatch.length(); ++i) {
+                        if (subString[i] == '\n') {++currentLine;}
+                    }
+                    s_ptr += tokenMatch.length();
+                    found = true;
+                    break;
+                }
+
                 // begin token data parsing step
                 flowHandler.NewStep(); // down is true
                 
@@ -96,9 +108,10 @@ void Tokenizer::Tokenize(FileReader::FileStream* fileStream, ControlFlow::Contro
             
             status = ControlFlow::STATUSCODE_ERROR_CONTINUE;
 
-            // attempt to move forward until a whitespace is reached
+            // attempt to move forward until a whitespace is reached.
+            // the bounds check has to come first, otherwise `s.at()` throws at the end of the file.
             s_ptr += 1;
-            while (!std::isspace(s.at(s_ptr)) && s_ptr < s.length()) {
+            while (s_ptr < s.length() && !std::isspace(s.at(s_ptr))) {
                 s_ptr += 1;
             }
 
