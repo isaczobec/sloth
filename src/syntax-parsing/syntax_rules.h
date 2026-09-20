@@ -150,8 +150,9 @@ namespace ParseTree {
         extern Rule TYPE_ENUMERATION;     // "int, float"
         extern Rule PARAMETER;            // a type with an optional name, e.g. "int" or "int a"
         extern Rule PARAMETER_ENUMERATION;
-        extern Rule GENERIC_PARAMETERS;             // "<T : Comparable<T>, Equatable<T>>"
+        extern Rule GENERIC_PARAMETERS;             // "<T : [Comparable<T>, Equatable<T>], U>"
         extern Rule GENERIC_PARAMETER;
+        extern Rule GENERIC_CONSTRAINT;             // one interface, or several inside '[...]'
         extern Rule GENERIC_PARAMETER_ENUMERATION;
 
         // ---- declarations ----

@@ -33,6 +33,7 @@ namespace ParseTree {
         Rule PARAMETER_ENUMERATION("Parameter List");
         Rule GENERIC_PARAMETERS("Generic Parameters");
         Rule GENERIC_PARAMETER("Generic Parameter");
+        Rule GENERIC_CONSTRAINT("Generic Parameter Constraint");
         Rule GENERIC_PARAMETER_ENUMERATION("Generic Parameter List");
 
         // declarations
@@ -178,7 +179,17 @@ namespace ParseTree {
 
         GENERIC_PARAMETERS << T::BRACKET_ANGLE_LEFT << &GENERIC_PARAMETER_ENUMERATION << T::BRACKET_ANGLE_RIGHT;
         GENERIC_PARAMETER_ENUMERATION << &GENERIC_PARAMETER << D_OPST << T::ELEMENT_SEPARATOR << &GENERIC_PARAMETER_ENUMERATION << D_OPED;
-        GENERIC_PARAMETER << T::IDENTIFIER << D_OPST << T::TYPE_CONSTRAINT << &TYPE_ENUMERATION << D_OPED;
+        GENERIC_PARAMETER << T::IDENTIFIER << D_OPST << T::TYPE_CONSTRAINT << &GENERIC_CONSTRAINT << D_OPED;
+
+        /* A single constraint needs no brackets, several are grouped in square brackets:
+               <T : Comparable<T>>
+               <T : [Comparable<T>, Equatable<T>], U>
+           Without the brackets the comma would be ambiguous, since it is also what
+           separates one generic parameter from the next. */
+        GENERIC_CONSTRAINT << D_SBST
+            << T::BRACKET_SQUARE_LEFT << &TYPE_ENUMERATION << T::BRACKET_SQUARE_RIGHT
+            OR &TYPE
+            << D_SBED;
 
         // =====================================================================
         // declarations

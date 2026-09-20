@@ -55,6 +55,8 @@ namespace Tokenization {
         {TokenType::BRACKET_NORMAL_RIGHT,   std::regex(R"(\))")},
         {TokenType::BRACKET_ANGLE_LEFT,     std::regex(R"(<)")},
         {TokenType::BRACKET_ANGLE_RIGHT,    std::regex(R"(>)")},
+        {TokenType::BRACKET_SQUARE_LEFT,    std::regex(R"(\[)")},
+        {TokenType::BRACKET_SQUARE_RIGHT,   std::regex(R"(\])")},
 
         {TokenType::STATEMENT_TERMINATOR,   std::regex(R"(;)")},
         {TokenType::ELEMENT_SEPARATOR,      std::regex(R"(,)")},

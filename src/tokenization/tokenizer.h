@@ -32,6 +32,10 @@ namespace Tokenization {
            distinguishable by the tokenizer, so the parser separates them by backtracking. */
         BRACKET_ANGLE_LEFT,
         BRACKET_ANGLE_RIGHT,
+        /* '[' and ']'. Currently only used to group several interface constraints on a
+           single generic parameter. */
+        BRACKET_SQUARE_LEFT,
+        BRACKET_SQUARE_RIGHT,
 
         IDENTIFIER,
 
