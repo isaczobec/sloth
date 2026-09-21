@@ -12,6 +12,12 @@ PfStack::PIteratorPair PfStack::GetHandlers() {
 
 void PfStack::Pop() {
     pfs.pop_back();
+
+    // remove from startindicies if we are popping a
+    // handler with overridePrev set
+    if (!startIndicies.empty() && startIndicies.back() == pfs.size()) {
+        startIndicies.pop_back();
+    }
 }
 
 void PfStack::Push(NodeHandler&& handler, bool overridePrev) {

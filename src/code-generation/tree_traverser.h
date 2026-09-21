@@ -21,8 +21,9 @@ namespace CodeGeneration
         std::vector<size_t> startIndicies; 
 
         public:
-        using PIteratorPair = std::pair<std::vector<NodeHandler>::iterator, 
-                              std::vector<NodeHandler>::iterator>;
+        using PIteratorPair = std::pair<
+                                std::vector<NodeHandler>::iterator, 
+                                std::vector<NodeHandler>::iterator>;
 
         PIteratorPair GetHandlers();
         void Pop();
