@@ -1,5 +1,15 @@
-if (v < adsa)  {a2321 = a23223;};
-if (v < v)  {a2321 = a23223;};
-if (v < v)  {a2321 = a23223;};
-if (v < v)  {a2321 = a23223;};
-if (v < v)  {a2321 = a23223;};
+impure (BinaryTree&, T) -> BinaryTree& insert;
+insert(Node n, t) := {
+
+    BinaryTree& next := 
+        t.greaterThan(n.value) ? n.right |
+        true ? n.left;
+
+    // writing a subtype of an ADT and then a variable name both checks a truth value
+    // and binds that the variable is of that subtype in the opened scope
+    if (Node next) { 
+        return insert(next, t);
+    } else if (Nothing next) {
+        next = (BinaryTree Node) { value = t; };
+    }
+}

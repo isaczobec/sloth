@@ -9,6 +9,8 @@ set(SRC
     "src/syntax-parsing/syntax_rules.cpp"
     "src/syntax-parsing/rules.cpp"
     "src/file-reading/file_reader.cpp"
+    "src/code-generation/tree_traverser.cpp"
+    "src/code-generation/symbol_table.cpp"
 )
 
 project(sloth)

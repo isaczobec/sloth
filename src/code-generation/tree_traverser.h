@@ -9,7 +9,7 @@ namespace CodeGeneration
 {
     class TreeTraverser;
     typedef std::function<void(ParseTreeNode&, TreeTraverser&, ControlFlowHandler&)> NodeHandler;
-    const NodeHandler NONE = [](...) {}; // Node Handler that does nothing
+    const NodeHandler NONE = [](ParseTreeNode&, TreeTraverser&, ControlFlowHandler&) {}; // Node Handler that does nothing
 
     struct PfStack {
         private:
@@ -45,7 +45,7 @@ namespace CodeGeneration
          * `overridePrev` will cause previous handlers not to be called
          * at all until the current node has been processed completely.
          */
-        void AddHandler(Rule* rule, NodeHandler pf, bool overridePrev);
+        void AddHandler(Rule* rule, bool overridePrev, NodeHandler pf);
 
         private:
         /**A map from rules to the stack of rules used to process them.*/

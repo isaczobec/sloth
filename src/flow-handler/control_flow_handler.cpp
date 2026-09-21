@@ -2,6 +2,8 @@
 #include "../file-reading/file_reader.h"
 #include "../tokenization/tokenizer.h"
 #include "../syntax-parsing/syntax_rules.h"
+#include "../code-generation/tree_traverser.h"
+#include "../code-generation/symbol_table.h"
 
 #include <iostream>
 #include <string>
@@ -118,6 +120,11 @@ namespace ControlFlow {
         ParseTreeBuilder builder;
         int tokenPtr = 0;
         ParseTreeNode* node = builder.ParseNode(&Rules::TOP_STATEMENT_SEQUENCE, t.GetTokens(), tokenPtr, *this);
+
+        // // Symbol table creation
+        CodeGeneration::InitSymbolTableGenerator();
+        CodeGeneration::symbolTableGenerator.TraverseNode(*node, *this);
+
 
         // report the outcome of parsing. a node that stops short of the end of file
         // token means the parser gave up part way through without being able to recover.

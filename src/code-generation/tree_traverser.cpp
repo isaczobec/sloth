@@ -30,10 +30,16 @@ void PfStack::Push(NodeHandler&& handler, bool overridePrev) {
     }  
 }
 
+TreeTraverser::TreeTraverser() :
+    pfMap() {}
+
+TreeTraverser::~TreeTraverser() {}
+
 void TreeTraverser::TraverseNode(ParseTreeNode& node, ControlFlowHandler& cf) {
 
     // create a vector of flags of which rules have had handlers added
     std::vector<Rule*> currentRulesAddedFlags;
+    auto prevRulesAddedFlags = rulesAddedFlags;
     rulesAddedFlags = &currentRulesAddedFlags;
 
     auto it = pfMap.find(node.rule);
@@ -61,11 +67,14 @@ void TreeTraverser::TraverseNode(ParseTreeNode& node, ControlFlowHandler& cf) {
     for (Rule* rule : currentRulesAddedFlags) {
         pfMap[rule].Pop();
     }
+
+    // point back to the rules added flags of the parent node
+    rulesAddedFlags = prevRulesAddedFlags;
 }
 
-void TreeTraverser::AddHandler(Rule* rule, NodeHandler pf, bool overridePrev = false) {
+void TreeTraverser::AddHandler(Rule* rule, bool overridePrev, NodeHandler pf) {
  
     // record that a handler has been added by this node
-    rulesAddedFlags->push_back(rule);
+    if (rulesAddedFlags != NULL) rulesAddedFlags->push_back(rule);
     pfMap[rule].Push(std::move(pf), overridePrev);
 }
