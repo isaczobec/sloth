@@ -1,3 +1,3 @@
-# Unnamed data processing language
+# sloth
 
-the beginnings of an attempt to create a bytecode compiler and runtime for a data processing language, with applications in optimization, numerical analysis, quantitative finance, etc.
+Custom syntax parser built in c++, and syntax rules for a WIP programming language.
