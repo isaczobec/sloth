@@ -48,7 +48,7 @@ void TreeTraverser::TraverseNode(ParseTreeNode& node, ControlFlowHandler& cf) {
     rulesAddedFlags = &currentRulesAddedFlags;
 
     // create a count of how many do-after functions have been added
-    size_t doAfterCount;
+    size_t doAfterCount = 0;
     currentDoAfterCount = &doAfterCount;
 
     auto it = pfMap.find(node.rule);

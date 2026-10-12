@@ -13,3 +13,5 @@ insert(Node n, t) := {
         next = (BinaryTree Node) { value = t; };
     }
 }
+
+impure (BinaryTree&, T) -> BinaryTree& insert;
