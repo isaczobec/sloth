@@ -35,12 +35,21 @@ TreeTraverser::TreeTraverser() :
 
 TreeTraverser::~TreeTraverser() {}
 
+void TreeTraverser::DoAfter(NodeHandler handler) {
+    doAfterFunctions.push_back(handler);
+    (*currentDoAfterCount)++;
+}
+
 void TreeTraverser::TraverseNode(ParseTreeNode& node, ControlFlowHandler& cf) {
 
     // create a vector of flags of which rules have had handlers added
     std::vector<Rule*> currentRulesAddedFlags;
     auto prevRulesAddedFlags = rulesAddedFlags;
     rulesAddedFlags = &currentRulesAddedFlags;
+
+    // create a count of how many do-after functions have been added
+    size_t doAfterCount;
+    currentDoAfterCount = &doAfterCount;
 
     auto it = pfMap.find(node.rule);
     if (it != pfMap.end()) { // if the handler existed
@@ -60,9 +69,16 @@ void TreeTraverser::TraverseNode(ParseTreeNode& node, ControlFlowHandler& cf) {
         TraverseNode(*child, cf);
     }
 
-    // TODO: add possibility to run a lambda after all 
-    // children have been processed
-
+    // run all do-after functions
+    for (size_t i = doAfterFunctions.size() - doAfterCount; i < doAfterFunctions.size(); i++) {
+        doAfterFunctions[i](node, *this, cf);
+    }
+    
+    // pop all do-after functions
+    for (size_t i = 0; i < doAfterCount; i++) {
+        doAfterFunctions.pop_back();
+    }
+    
     // pop handlers from where they have been added
     for (Rule* rule : currentRulesAddedFlags) {
         pfMap[rule].Pop();

@@ -47,6 +47,11 @@ namespace CodeGeneration
          */
         void AddHandler(Rule* rule, bool overridePrev, NodeHandler pf);
 
+        /** Adds a nodehandler that is ran after all handlers and children
+         * of this node has been processed.
+         */
+        void DoAfter(NodeHandler handler);
+
         private:
         /**A map from rules to the stack of rules used to process them.*/
         std::map<Rule*, PfStack> pfMap;
@@ -56,5 +61,14 @@ namespace CodeGeneration
          * after the node has been processed completely.
          */
         std::vector<Rule*>* rulesAddedFlags;
+        
+        
+        /**A vector of functions to call on the current node after all
+         * children have been processed. Adding to this vector increments
+         * *doAfterCount. 
+         */
+        std::vector<NodeHandler> doAfterFunctions;
+        
+        size_t* currentDoAfterCount;
     };
 } 
